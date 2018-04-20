@@ -20,8 +20,8 @@
 #define POSTFIX "\r\n"
 #define SOCR "NSOCR=\"DGRAM\",17,%d,1"
 #define SOST "NSOST="
-#define SOCL "NSOCL=0"
-#define RECVFROM "NSORF=0,255"
+#define SOCL "NSOCL=%d"
+#define RECVFROM "NSORF=%d,255"
 #define GPRS "CGATT?"
 #define IMSI "CIMI"
 #define IMEI "CGSN=1"
@@ -48,14 +48,17 @@ bool TelenorNBIoT::begin(uint16_t speed)
     // Increase timeout for the module. It might be slow to respond on certain
     // commands.
     ublox.setTimeout(DEFAULT_TIMEOUT);
-    while (!ublox) ;
+    while (!ublox)
+        ;
 
     return online();
 }
 
-bool TelenorNBIoT::dataOn() {
+bool TelenorNBIoT::dataOn()
+{
     writeCommand(CONNECT_DATA);
-    if (readCommand(lines) == 1 && isOK(lines[0])) {
+    if (readCommand(lines) == 1 && isOK(lines[0]))
+    {
         return true;
     }
     return false;
@@ -121,10 +124,10 @@ bool TelenorNBIoT::closeSocket()
 {
     if (m_socket > -1)
     {
-        writeCommand(SOCL);
+        sprintf(buffer, SOCL, m_socket);
+        writeCommand(buffer);
         if (readCommand(lines) == 1 && isOK(lines[0]))
         {
-            // success
             m_socket = -1;
             return true;
         }
@@ -134,6 +137,7 @@ bool TelenorNBIoT::closeSocket()
 
 bool TelenorNBIoT::reboot()
 {
+    m_socket = -1;
     writeCommand(REBOOT);
     delay(2000);
     int ret = readCommand(lines);
@@ -257,7 +261,8 @@ bool TelenorNBIoT::send(const char *data, const uint16_t length)
 
 bool TelenorNBIoT::receiveFrom(char *ip, uint16_t *port, char *outbuf, uint16_t *length, uint16_t *remain)
 {
-    writeCommand(RECVFROM);
+    sprintf(buffer, RECVFROM, m_socket);
+    writeCommand(buffer);
     if (readCommand(lines) == 2 && isOK(lines[1]))
     {
         // Data should be <socket>,<ip>,<port>,<length>,<data>,<remaining length>
@@ -372,7 +377,8 @@ unsigned long long TelenorNBIoT::atoi64(const char *input)
     unsigned long long ret = 0;
     for (int i = 0; i < strlen(input); i++)
     {
-        if (input[i] < '0' || input[i] > '9') {
+        if (input[i] < '0' || input[i] > '9')
+        {
             // ignore non-numeric characters
             continue;
         }
