@@ -28,6 +28,7 @@
 #define REBOOT "NRB"
 #define RADIO_ON "CFUN=1"
 #define RADIO_OFF "CFUN=0"
+#define SIGNAL_STRENGTH "CSQ"
 #define CONNECT_DATA "CGATT=1"
 #define DEFAULT_TIMEOUT 2000
 
@@ -166,6 +167,28 @@ bool TelenorNBIoT::offline()
         return true;
     }
     return false;
+}
+
+int TelenorNBIoT::rssi()
+{
+    int rssi = 99;
+    writeCommand(SIGNAL_STRENGTH);
+    int ret = readCommand(lines);
+    if (ret != 2 || !isOK(lines[1]))
+    {
+        return rssi;
+    }
+    char* fields[2];
+    int found = splitFields(lines[0] + 6, fields);
+    if (found != 1)
+    {
+        return rssi;
+    }
+    rssi = atoi(fields[0]);
+    if (rssi == 99) {
+      return rssi;
+    }
+    return -113 + rssi * 2;
 }
 
 void TelenorNBIoT::addHeader()
