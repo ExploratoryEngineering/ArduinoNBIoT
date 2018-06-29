@@ -121,6 +121,16 @@ class TelenorNBIoT
     bool reboot();
 
     /**
+     * Returns the Received Signal Strength Indication from the mobile terminal.
+     * In dedicated mode, during the radio channel reconfiguration (e.g.
+     * handover), invalid measurements may be returned for a short transitory
+     * because the mobile terminal must compute them on the newly assigned
+     * channel.
+     * Returns 99 if RSSI is not detectable
+     */
+    int rssi();
+
+    /**
      * Helper function to convert IMSI and IMEI strings into 64 bit integers.
      */
     unsigned long long atoi64(const char *str);
