@@ -38,6 +38,12 @@
 class TelenorNBIoT
 {
   public:
+    enum power_save_mode {
+        psm_sleep_after_send = 0,
+        psm_sleep_after_response,
+        psm_always_on,
+    };
+
     /**
      * Attach to module connected to specified pins. Consult the documentation
      * to see which pins your board supports.
@@ -48,6 +54,15 @@ class TelenorNBIoT
      * Initialize the module with the specified baud rate. The default is 9600.
      */
     bool begin(uint16_t speed = DEFAULT_SPEED);
+
+    /**
+     * Set the module power save mode.
+     * The default power save mode is psm_sleep_after_send.
+     * Available power save modes are psm_always_on, psm_sleep_after_send and
+     * psm_sleep_after_response.
+     * 
+     */
+    bool powerSaveMode(TelenorNBIoT::power_save_mode psm = psm_sleep_after_send);
 
     /**
      * Returns true when the board is online, ie there's a GPRS connection
@@ -148,6 +163,7 @@ class TelenorNBIoT
     SoftwareSerial ublox;
     char buffer[BUFSIZE];
     char *lines[MAXLINES];
+    power_save_mode m_psm;
 
     bool dataOn();
     uint8_t readCommand(char **lines);

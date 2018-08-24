@@ -19,7 +19,7 @@
 #define PREFIX "AT+"
 #define POSTFIX "\r\n"
 #define SOCR "NSOCR=\"DGRAM\",17,%d,1"
-#define SOST "NSOST="
+#define SOSTF "NSOSTF="
 #define SOCL "NSOCL=%d"
 #define RECVFROM "NSORF=%d,255"
 #define GPRS "CGATT?"
@@ -238,12 +238,22 @@ void TelenorNBIoT::writeBuffer(const char *data, uint16_t length)
 bool TelenorNBIoT::sendTo(const char *ip, const uint16_t port, const char *data, const uint16_t length)
 {
     ublox.print(PREFIX);
-    ublox.print(SOST);
+    ublox.print(SOSTF);
     ublox.print(m_socket);
     ublox.print(",\"");
     ublox.print(ip);
     ublox.print("\",");
     ublox.print(port);
+    ublox.print(",");
+    
+    if (m_psm == psm_always_on) {
+        ublox.print("0x000");
+    } else if (m_psm == psm_sleep_after_send) {
+        ublox.print("0x200");
+    } else if (m_psm == psm_sleep_after_response) {
+        ublox.print("0x400");
+    }
+
     ublox.print(",");
     ublox.print(length);
     ublox.print(",\"");
@@ -318,6 +328,26 @@ bool TelenorNBIoT::receive(char *buffer, uint16_t *length, uint16_t *remain)
 {
     // TODO(stalehd): Check the originating IP address.
     return receiveFrom(NULL, NULL, buffer, length, remain);
+}
+
+bool TelenorNBIoT::powerSaveMode(TelenorNBIoT::power_save_mode psm)
+{
+    m_psm = psm;
+
+    if (m_psm == psm_sleep_after_send || m_psm == psm_sleep_after_response) {
+        // disable eDRX
+        writeCommand("CEDRXS=3,5");
+
+        // enable Power Save Mode and set active time to as low as possible
+        writeCommand("CPSMS=1,,,\"01000001\",\"00000000\"");
+        return (readCommand(lines) == 1 && isOK(lines[0]));
+    } else {
+        // set eDRX to default value
+        writeCommand("CEDRXS=0");
+
+        // disable Power Save Mode and reset all PSM parameters to factory values
+        writeCommand("CPSMS=2");
+    }
 }
 
 bool TelenorNBIoT::isOK(const char *line)
