@@ -20,17 +20,40 @@
  * https://exploratory.engineering/
  */
 #include "TelenorNBIoT.h"
-#define RX_PIN 10
-#define TX_PIN 11
 
-TelenorNBIoT nbiot(RX_PIN, TX_PIN, 7000);
+#ifdef SERIAL_PORT_HARDWARE_OPEN
+/*
+ * For Arduino boards with a hardware serial port separate from USB serial.
+ * This is usually mapped to Serial1. Check which pins are used for Serial1 on
+ * the board you're using.
+ */
+#define nbiotSerial SERIAL_PORT_HARDWARE_OPEN
+#else
+/*
+ * For Arduino boards with only one hardware serial port (like Arduino UNO). It
+ * is mapped to USB, so we use SoftwareSerial on pin 10 and 11 instead.
+ */
+#include <SoftwareSerial.h>
+SoftwareSerial nbiotSerial(10, 11);
+#endif
+
+// Configure mobile country code, mobile network code and access point name
+// See https://www.mcc-mnc.com/ for country and network codes
+// Mobile Country Code: 242 (Norway)
+// Mobile Network Operator: 01 (Telenor)
+// Access Point Namme: mda.ee (Telenor NB-IoT Developer Platform)
+TelenorNBIoT nbiot(242, 01, "mda.ee");
+
+IPAddress remoteIP(172, 16, 7, 197);
+int REMOTE_PORT = 31415;
 
 void setup() {
   Serial.begin(9600);
   while (!Serial) ;
   printHelp();
 
-  nbiot.begin();
+  nbiotSerial.begin(9600);
+  nbiot.begin(nbiotSerial);
 }
 
 void printHelp() {
@@ -39,7 +62,7 @@ void printHelp() {
   Serial.println(F("g. . . . . Check GPRS status (aka connected)"));
   Serial.println(F("n. . . . . Create socket"));
   Serial.println(F("c. . . . . Close socket"));
-  Serial.println(F("s. . . . . SendTo"));
+  Serial.println(F("s. . . . . Send packet \"Hello\""));
   Serial.println(F("r. . . . . ReciveFrom"));
   Serial.println(F("i. . . . . IMEI"));
   Serial.println(F("I. . . . . IMSI"));
@@ -63,7 +86,7 @@ void loop() {
         break;
 
       case 'g':
-        if (nbiot.connected()) {
+        if (nbiot.isConnected()) {
           Serial.println(F("Module is online"));
         } else {
           Serial.println(F("Module is not connected"));
@@ -71,17 +94,13 @@ void loop() {
         break;
 
       case 'i':
-        tmp = nbiot.imei();
         Serial.print(F("IMEI = "));
-        nbiot.i64toa(tmp, buf);
-        Serial.println(buf);
+        Serial.println(nbiot.imei());
         break;
 
       case 'I':
-        tmp = nbiot.imsi();
         Serial.print(F("IMSI = "));
-        nbiot.i64toa(tmp, buf);
-        Serial.println(buf);
+        Serial.println(nbiot.imsi());
         break;
 
       case 'n':
@@ -101,7 +120,7 @@ void loop() {
         break;
 
       case 's':
-        if (nbiot.send("Hello", 5)) {
+        if (nbiot.sendString(remoteIP, REMOTE_PORT, "Hello")) {
           Serial.println(F("Data sent"));
         } else {
           Serial.println(F("Unable to send data"));

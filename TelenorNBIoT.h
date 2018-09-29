@@ -13,24 +13,19 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
-
 #ifndef TELENOR_NBIOT_H
 #define TELENOR_NBIOT_H
 
-#include "SoftwareSerial.h"
+#include <Udp.h>
+
 // IP address for the Horde backend
-#define IP "54.77.39.136"
-// Horde port
-#define PORT 31415
+// #define IP "172.16.7.197"
 // Default speed for the serial port
 #define DEFAULT_SPEED 9600
 // Maximum input buffer size.
 #define BUFSIZE 255
 // Maximum number of lines.
 #define MAXLINES 5
-// The default local port. If more than one instance of the class is created
-// and used each instance should have its own unique port number.
-#define LOCAL_PORT 8000
 
 /**
  * User-friendly interface to the SARA N2 module from ublox
@@ -38,21 +33,33 @@
 class TelenorNBIoT
 {
   public:
-    /**
-     * Attach to module connected to specified pins. Consult the documentation
-     * to see which pins your board supports.
-     */
-    TelenorNBIoT(int rx, int tx, uint16_t local_port = LOCAL_PORT);
+    enum power_save_mode {
+        psm_sleep_after_send = 0,
+        psm_sleep_after_response,
+        psm_always_on,
+    };
+
+    TelenorNBIoT(uint16_t mobileCountryCode, uint16_t mobileNetworkCode,
+        String accessPointName);
 
     /**
      * Initialize the module with the specified baud rate. The default is 9600.
      */
-    bool begin(uint16_t speed = DEFAULT_SPEED);
+    bool begin(Stream &serial);
+
+    /**
+     * Set the module power save mode.
+     * The default power save mode is psm_sleep_after_send.
+     * Available power save modes are psm_always_on, psm_sleep_after_send and
+     * psm_sleep_after_response.
+     * 
+     */
+    bool powerSaveMode(TelenorNBIoT::power_save_mode psm = psm_sleep_after_send);
 
     /**
      * Returns true when the board is online, ie there's a GPRS connection
      */
-    bool connected();
+    bool isConnected();
 
     /**
      * Register the module on the mobile network. This sets the operator
@@ -71,24 +78,18 @@ class TelenorNBIoT
      * Get the IMEI for the module. This is also printed on top of the
      * module itself.
      */
-    unsigned long long imei();
+    String imei();
 
     /**
      * Get the IMSI for the SIM chip attached to the module.
      */
-    unsigned long long imsi();
+    String imsi();
 
     /**
      * Create a new socket. Call this before attempting to send data with the
      * module.
      */
     bool createSocket();
-
-    /**
-     * Send UDP packet to an IP address. Note that the module doesn't support
-     * DNS so you have to specify an IP address.
-     */
-    bool sendTo(const char *ip, const uint16_t port, const char *data, const uint16_t length);
 
     /**
      * Receive any pending data. If there's no data available it will yield an
@@ -99,9 +100,16 @@ class TelenorNBIoT
     bool receiveFrom(char *ip, uint16_t *port, char *buffer, uint16_t *length, uint16_t *remain = NULL);
 
     /**
-     * Send data to the Horde backend.
+     * Send UDP packet to remote IP address. Also handles with opening and
+     * closing of a socket.
      */
-    bool send(const char *data, const uint16_t length);
+    bool sendBytes(IPAddress remoteIP, const uint16_t port, const char data[], const uint16_t length);
+    
+    /**
+     * Send a string as a UDP packet to remote IP address. Also handles with
+     * opening and closing of a socket.
+     */
+    bool sendString(IPAddress remoteIP, const uint16_t port, String str);
 
     /**
      * Receive data.
@@ -130,6 +138,18 @@ class TelenorNBIoT
      */
     int rssi();
 
+    enum t_registrationStatus {
+        RS_UNKNOWN = 0,
+        RS_NOT_REGISTERED,
+        RS_REGISTERED,
+        RS_REGISTERING,
+        RS_DENIED,
+    };
+
+    t_registrationStatus registrationStatus();
+    bool isRegistered();
+    bool isRegistering();
+
     /**
      * Helper function to convert IMSI and IMEI strings into 64 bit integers.
      */
@@ -141,22 +161,28 @@ class TelenorNBIoT
     void i64toa(unsigned long long val, char *buffer);
 
   private:
-    int16_t m_socket;
-    unsigned long long m_imei;
-    unsigned long long m_imsi;
-    uint16_t m_local_port;
-    SoftwareSerial ublox;
+    int16_t _socket;
+    char *_imei;
+    char *_imsi;
+    uint16_t mcc;
+    uint16_t mnc;
+    char apn[30];
+    Stream* ublox;
     char buffer[BUFSIZE];
     char *lines[MAXLINES];
+    power_save_mode m_psm;
 
     bool dataOn();
     uint8_t readCommand(char **lines);
     void writeCommand(const char *cmd);
+    void drain();
+    bool setNetworkOperator(uint8_t, uint8_t);
+    bool setAccessPointName(String);
     bool isOK(const char *line);
     bool isError(const char *line);
     int splitFields(char *line, char **fields);
-    void addHeader();
     void writeBuffer(const char *data, uint16_t length);
+    bool sendTo(const char *ip, const uint16_t port, const char *data, const uint16_t length);
 };
 
 #endif
