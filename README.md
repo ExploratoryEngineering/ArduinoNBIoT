@@ -20,9 +20,9 @@ OK
 
 ## Installing the library
 
-Download the zip file from the releases page, then add it in the Arduino IDE
-with `Sketch|Library|Add .ZIP library`. The library will now be available via
-Library Manager.
+Click the green «Clone or Download» button, then «Download ZIP». Add it in the
+Arduino IDE with `Sketch|Library|Add .ZIP library`. The library will now be
+available via Library Manager.
 
 ## Troubleshooting
 
