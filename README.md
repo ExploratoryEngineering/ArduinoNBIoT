@@ -1,11 +1,10 @@
 # The Telenor NB-IoT Arduino library
 
 This is a library to make the NB-IoT breakouts from
-[Exploratory Engineering](https://exploratory.engineering/) a bit easier to use.
+[Exploratory Engineering](https://shop.exploratory.engineering/) a bit easier to use.
 
-It integrates with the backend service at nbiot.engineering. There's a
-provisional version available at [http://in.nbiot.engineering/](http://in.nbiot.engineering/).
-The `sendTo` function can be used to send data to another endpoint.
+It integrates with the backend service at https://nbiot.engineering/.
+The `sendBytes` and `sendString` functions can be used to send data to remote servers.
 
 The module must be running the uBlox firmware 06.57 or later. Connect to the
 module via a serial cable and issue the command `AT+CGMR` to see the firmware

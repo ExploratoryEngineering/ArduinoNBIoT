@@ -15,14 +15,16 @@
 */
 #include "TelenorNBIoT.h"
 #include <Arduino.h>
+#include <Udp.h>
 
 #define PREFIX "AT+"
 #define POSTFIX "\r\n"
 #define SOCR "NSOCR=\"DGRAM\",17,%d,1"
-#define SOST "NSOST="
+#define SOSTF "NSOSTF="
 #define SOCL "NSOCL=%d"
 #define RECVFROM "NSORF=%d,255"
 #define GPRS "CGATT?"
+#define REG_STATUS "CEREG?"
 #define IMSI "CIMI"
 #define IMEI "CGSN=1"
 #define REBOOT "NRB"
@@ -31,28 +33,53 @@
 #define SIGNAL_STRENGTH "CSQ"
 #define CONNECT_DATA "CGATT=1"
 #define DEFAULT_TIMEOUT 2000
+#define LOCAL_PORT 8000
 
-// The default horde type packet
-#define MESSAGE_TYPE 1
-
-TelenorNBIoT::TelenorNBIoT(int rx, int tx, uint16_t local_port) : ublox(rx, tx)
+TelenorNBIoT::TelenorNBIoT(uint16_t mobileCountryCode, uint16_t mobileNetworkCode, String accessPointName)
 {
-    m_socket = -1;
-    m_imei = 0;
-    m_imsi = 0;
-    m_local_port = local_port;
+    _socket = -1;
+    _imei = "";
+    _imsi = "";
+
+    mcc = mobileCountryCode;
+    mnc = mobileNetworkCode;
+    strcpy(apn, accessPointName.c_str());
 }
 
-bool TelenorNBIoT::begin(uint16_t speed)
+bool TelenorNBIoT::begin(Stream &serial)
 {
-    ublox.begin(speed);
+    //Stream &serial
+    ublox = &serial;
     // Increase timeout for the module. It might be slow to respond on certain
     // commands.
-    ublox.setTimeout(DEFAULT_TIMEOUT);
+    ublox->setTimeout(DEFAULT_TIMEOUT);
     while (!ublox)
         ;
+    reboot();
 
-    return online();
+    return online() &&
+        setNetworkOperator(mcc, mnc) &&
+        setAccessPointName(apn);
+}
+
+bool TelenorNBIoT::setNetworkOperator(uint8_t mobileCountryCode, uint8_t mobileNetworkCode)
+{
+    char buffer[40];
+    sprintf(buffer, "COPS=1,2,\"%d%02d\"", mobileCountryCode, mobileNetworkCode);
+    writeCommand(buffer);
+    return readCommand(lines) == 1 && isOK(lines[0]);
+}
+
+bool TelenorNBIoT::setAccessPointName(String accessPointName)
+{
+    sprintf(buffer, "CGDCONT=1,\"IP\",\"%s\"", accessPointName.c_str());
+    writeCommand(buffer);
+    if (readCommand(lines) == 1 && !isOK(lines[0])) {
+        return false;
+    }
+
+    writeCommand("CGACT=1,1");
+    return readCommand(lines) == 1 && isOK(lines[0]);
 }
 
 bool TelenorNBIoT::dataOn()
@@ -65,7 +92,7 @@ bool TelenorNBIoT::dataOn()
     return false;
 }
 
-bool TelenorNBIoT::connected()
+bool TelenorNBIoT::isConnected()
 {
     writeCommand(GPRS);
     if (readCommand(lines) == 2 && isOK(lines[1]))
@@ -78,43 +105,75 @@ bool TelenorNBIoT::connected()
     return false;
 }
 
-unsigned long long TelenorNBIoT::imei()
+TelenorNBIoT::t_registrationStatus TelenorNBIoT::registrationStatus()
 {
-    if (m_imei == 0)
+    int statusNum = -1;
+    writeCommand(REG_STATUS);
+    if (readCommand(lines) == 2 && isOK(lines[1]))
+    {
+        // Line contains "+CEREG: <n>,<status>"
+        statusNum = atoi((lines[0] + 10));
+    }
+    
+    if (statusNum == 0) {
+        return RS_NOT_REGISTERED;
+    } else if (statusNum == 1) {
+        return RS_REGISTERED;
+    } else if (statusNum == 2) {
+        return RS_REGISTERING;
+    } else if (statusNum == 3) {
+        return RS_DENIED;
+    }
+    return RS_UNKNOWN;
+}
+
+bool TelenorNBIoT::isRegistered()
+{
+    return registrationStatus() == RS_REGISTERED;
+}
+
+bool TelenorNBIoT::isRegistering()
+{
+    return registrationStatus() == RS_REGISTERING;
+}
+
+String TelenorNBIoT::imei()
+{
+    if (_imei == "")
     {
         writeCommand(IMEI);
         if (readCommand(lines) == 2 && isOK(lines[1]))
         {
             // Line 1 contains IMEI ("+CGSN: <15-digit IMEI>")
-            m_imei = atoi64(lines[0] + 7);
+            _imei = lines[0] + 7;
         }
     }
-    return m_imei;
+    return String(_imei);
 }
 
-unsigned long long TelenorNBIoT::imsi()
+String TelenorNBIoT::imsi()
 {
-    if (m_imsi == 0)
-    {
+    if (_imsi == "")
+        {
         writeCommand(IMSI);
         if (readCommand(lines) == 2 && isOK(lines[1]))
         {
             // Line contains IMSI ("<15 digit IMSI>")
-            m_imsi = atoi64(lines[0]);
-        }
+            _imsi = lines[0];
+            }
     }
-    return m_imsi;
-}
+    return String(_imsi);
+    }
 
 bool TelenorNBIoT::createSocket()
 {
-    if (m_socket == -1)
+    if (_socket == -1)
     {
-        sprintf(buffer, SOCR, m_local_port);
+        sprintf(buffer, SOCR, LOCAL_PORT);
         writeCommand(buffer);
         if (readCommand(lines) == 2 && isOK(lines[1]))
         {
-            m_socket = atoi(lines[0]);
+            _socket = atoi(lines[0]);
             return true;
         }
     }
@@ -123,13 +182,13 @@ bool TelenorNBIoT::createSocket()
 
 bool TelenorNBIoT::closeSocket()
 {
-    if (m_socket > -1)
+    if (_socket > -1)
     {
-        sprintf(buffer, SOCL, m_socket);
+        sprintf(buffer, SOCL, _socket);
         writeCommand(buffer);
         if (readCommand(lines) == 1 && isOK(lines[0]))
         {
-            m_socket = -1;
+            _socket = -1;
             return true;
         }
     }
@@ -138,25 +197,17 @@ bool TelenorNBIoT::closeSocket()
 
 bool TelenorNBIoT::reboot()
 {
-    m_socket = -1;
+    _socket = -1;
     writeCommand(REBOOT);
     delay(2000);
     int ret = readCommand(lines);
-    if (ret > 0 && isOK(lines[ret - 1]))
-    {
-        return true;
-    }
-    return false;
+    return ret > 0 && isOK(lines[ret - 1]);
 }
 
 bool TelenorNBIoT::online()
 {
     writeCommand(RADIO_ON);
-    if (readCommand(lines) == 1 && isOK(lines[0]))
-    {
-        return dataOn();
-    }
-    return false;
+    return (readCommand(lines) == 1 && isOK(lines[0]));
 }
 
 bool TelenorNBIoT::offline()
@@ -191,23 +242,6 @@ int TelenorNBIoT::rssi()
     return -113 + rssi * 2;
 }
 
-void TelenorNBIoT::addHeader()
-{
-    unsigned long long tmp = m_imei;
-    buffer[0] = MESSAGE_TYPE;
-    for (int i = 0; i < 7; i++)
-    {
-        buffer[7 - i] = (char)(tmp & 0xFF);
-        tmp >>= 8;
-    }
-    tmp = m_imsi;
-    for (int i = 0; i < 7; i++)
-    {
-        buffer[14 - i] = (char)(tmp & 0xFF);
-        tmp >>= 8;
-    }
-}
-
 void TelenorNBIoT::writeBuffer(const char *data, uint16_t length)
 {
     for (int i = 0; i < length; i++)
@@ -230,28 +264,41 @@ void TelenorNBIoT::writeBuffer(const char *data, uint16_t length)
         {
             ch2 = (char)('A' + ch2 - 10);
         }
-        ublox.write(ch1);
-        ublox.write(ch2);
+        ublox->write(ch1);
+        ublox->write(ch2);
     }
 }
 
 bool TelenorNBIoT::sendTo(const char *ip, const uint16_t port, const char *data, const uint16_t length)
 {
-    ublox.print(PREFIX);
-    ublox.print(SOST);
-    ublox.print(m_socket);
-    ublox.print(",\"");
-    ublox.print(ip);
-    ublox.print("\",");
-    ublox.print(port);
-    ublox.print(",");
-    ublox.print(length);
-    ublox.print(",\"");
+    if (_socket == -1) {
+        return false;
+    }
+    ublox->print(PREFIX);
+    ublox->print(SOSTF);
+    ublox->print(_socket);
+    ublox->print(",\"");
+    ublox->print(ip);
+    ublox->print("\",");
+    ublox->print(port);
+    ublox->print(",");
+    
+    if (m_psm == psm_always_on) {
+        ublox->print("0x000");
+    } else if (m_psm == psm_sleep_after_send) {
+        ublox->print("0x200");
+    } else if (m_psm == psm_sleep_after_response) {
+        ublox->print("0x400");
+    }
+
+    ublox->print(",");
+    ublox->print(length);
+    ublox->print(",\"");
 
     writeBuffer(data, length);
 
-    ublox.print("\"");
-    ublox.print(POSTFIX);
+    ublox->print("\"");
+    ublox->print(POSTFIX);
 
     if (readCommand(lines) == 2 && isOK(lines[1]))
     {
@@ -262,7 +309,7 @@ bool TelenorNBIoT::sendTo(const char *ip, const uint16_t port, const char *data,
             // Found two fields. First is socket no
             uint16_t socketNo = atoi(fields[0]);
             uint16_t bytes = atoi(fields[1]);
-            if (socketNo == m_socket && bytes == length)
+            if (socketNo == _socket && bytes == length)
             {
                 return true;
             }
@@ -271,20 +318,22 @@ bool TelenorNBIoT::sendTo(const char *ip, const uint16_t port, const char *data,
     return false;
 }
 
-bool TelenorNBIoT::send(const char *data, const uint16_t length)
+bool TelenorNBIoT::sendBytes(IPAddress remoteIP, const uint16_t port, const char data[], const uint16_t length)
 {
-    // Retrieve IMEI and IMSI if required
-    imei();
-    imsi();
+    memcpy(buffer, data, length);
+    char ip[16];
+    sprintf(ip, "%d.%d.%d.%d", remoteIP[0], remoteIP[1], remoteIP[2], remoteIP[3]);
+    return sendTo(ip, port, buffer, length);
+}
 
-    addHeader();
-    memcpy(buffer + 15, data, length);
-    return sendTo(IP, PORT, buffer, length + 15);
+bool TelenorNBIoT::sendString(IPAddress remoteIP, const uint16_t port, String str)
+{
+    return sendBytes(remoteIP, port, str.c_str(), str.length());
 }
 
 bool TelenorNBIoT::receiveFrom(char *ip, uint16_t *port, char *outbuf, uint16_t *length, uint16_t *remain)
 {
-    sprintf(buffer, RECVFROM, m_socket);
+    sprintf(buffer, RECVFROM, _socket);
     writeCommand(buffer);
     if (readCommand(lines) == 2 && isOK(lines[1]))
     {
@@ -320,6 +369,31 @@ bool TelenorNBIoT::receive(char *buffer, uint16_t *length, uint16_t *remain)
     return receiveFrom(NULL, NULL, buffer, length, remain);
 }
 
+bool TelenorNBIoT::powerSaveMode(TelenorNBIoT::power_save_mode psm)
+{
+    m_psm = psm;
+
+    if (m_psm == psm_sleep_after_send || m_psm == psm_sleep_after_response) {
+        // disable eDRX
+        writeCommand("CEDRXS=3,5");
+
+        // enable Power Save Mode and set active time to as low as possible
+        // mode (0 - disable PSM, 1 - enable PSM, 2 - disable PSM and reset all params)
+        // Requested Periodic RAU (N/A)
+        // Requested GPRS READY timer (N/A)
+        // Requested Periodic TAU (T3412) - 
+        // Requested Active Time (T3324) - 
+        writeCommand("CPSMS=1,,,\"01000001\",\"00000000\"");
+        return (readCommand(lines) == 1 && isOK(lines[0]));
+    } else {
+        // set eDRX to default value
+        writeCommand("CEDRXS=0");
+
+        // disable Power Save Mode and reset all PSM parameters to factory values
+        writeCommand("CPSMS=2");
+    }
+}
+
 bool TelenorNBIoT::isOK(const char *line)
 {
     return (line[0] == 'O' && line[1] == 'K');
@@ -347,16 +421,23 @@ int TelenorNBIoT::splitFields(char *line, char **fields)
     return found;
 }
 
+void TelenorNBIoT::drain()
+{
+    while(ublox->available()) {
+        ublox->read();
+    }
+}
+
 uint8_t TelenorNBIoT::readCommand(char **lines)
 {
     uint8_t read = 1;
     uint8_t lineno = 0;
     uint8_t offset = 0;
     bool completed = false;
-    ublox.listen();
+    drain();
     while (read > 0 && !completed && lineno < MAXLINES)
     {
-        read = ublox.readBytesUntil('\n', (buffer + offset), (BUFSIZE - offset));
+        read = ublox->readBytesUntil('\n', (buffer + offset), (BUFSIZE - offset));
         buffer[offset + read] = 0;
         if (read > 0)
         {
@@ -383,16 +464,16 @@ uint8_t TelenorNBIoT::readCommand(char **lines)
 void TelenorNBIoT::writeCommand(const char *cmd)
 {
     uint8_t n = 0;
-    ublox.listen();
-    while (ublox.available())
+    drain();
+    while (ublox->available())
     {
-        buffer[n++] = ublox.read();
+        buffer[n++] = ublox->read();
     }
 
     // TODO(stalehd): Process incoming data (if any)
-    ublox.print(PREFIX);
-    ublox.print(cmd);
-    ublox.print(POSTFIX);
+    ublox->print(PREFIX);
+    ublox->print(cmd);
+    ublox->print(POSTFIX);
 }
 
 unsigned long long TelenorNBIoT::atoi64(const char *input)
