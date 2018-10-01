@@ -57,8 +57,7 @@ bool TelenorNBIoT::begin(Stream &serial)
     // Increase timeout for the module. It might be slow to respond on certain
     // commands.
     ublox->setTimeout(DEFAULT_TIMEOUT);
-    while (!ublox)
-        ;
+    while (!ublox) {}
     reboot();
 
     return online() &&
@@ -78,14 +77,14 @@ bool TelenorNBIoT::setNetworkOperator(uint8_t mobileCountryCode, uint8_t mobileN
     return readCommand(lines) == 1 && isOK(lines[0]);
 }
 
-bool TelenorNBIoT::setAccessPointName(String accessPointName)
+bool TelenorNBIoT::setAccessPointName(const char *accessPointName)
 {
-    if (accessPointName == "") {
+    if (strcmp(accessPointName, "")) {
         // If the APN is blank, don't override the network default PDP context
         return true;
     }
     
-    sprintf(buffer, "CGDCONT=1,\"IP\",\"%s\"", accessPointName.c_str());
+    sprintf(buffer, "CGDCONT=1,\"IP\",\"%s\"", accessPointName);
     writeCommand(buffer);
     if (readCommand(lines) == 1 && !isOK(lines[0])) {
         return false;
@@ -118,7 +117,7 @@ bool TelenorNBIoT::isConnected()
     return false;
 }
 
-TelenorNBIoT::t_registrationStatus TelenorNBIoT::registrationStatus()
+TelenorNBIoT::registrationStatus_t TelenorNBIoT::registrationStatus()
 {
     int statusNum = -1;
     writeCommand(REG_STATUS);
@@ -331,7 +330,7 @@ bool TelenorNBIoT::sendTo(const char *ip, const uint16_t port, const char *data,
     return false;
 }
 
-bool TelenorNBIoT::sendBytes(IPAddress remoteIP, const uint16_t port, const char data[], const uint16_t length)
+bool TelenorNBIoT::sendBytes(IPAddress remoteIP, const uint16_t port, const char *data, const uint16_t length)
 {
     memcpy(buffer, data, length);
     char ip[16];
@@ -382,7 +381,7 @@ bool TelenorNBIoT::receive(char *buffer, uint16_t *length, uint16_t *remain)
     return receiveFrom(NULL, NULL, buffer, length, remain);
 }
 
-bool TelenorNBIoT::powerSaveMode(TelenorNBIoT::power_save_mode psm)
+bool TelenorNBIoT::powerSaveMode(power_save_mode psm)
 {
     m_psm = psm;
 
@@ -487,38 +486,4 @@ void TelenorNBIoT::writeCommand(const char *cmd)
     ublox->print(PREFIX);
     ublox->print(cmd);
     ublox->print(POSTFIX);
-}
-
-unsigned long long TelenorNBIoT::atoi64(const char *input)
-{
-    unsigned long long ret = 0;
-    for (int i = 0; i < strlen(input); i++)
-    {
-        if (input[i] < '0' || input[i] > '9')
-        {
-            // ignore non-numeric characters
-            continue;
-        }
-        ret += (unsigned long long)(input[i] - '0');
-        ret *= 10;
-    }
-    return (ret / 10);
-}
-
-// Convert unsigned 64 bit int to a string (aka IMSI and IMEI)
-void TelenorNBIoT::i64toa(unsigned long long input, char *buffer)
-{
-    char pos = 0;
-    while (input > 0)
-    {
-        buffer[pos++] = ('0' + (char)(input % 10));
-        input /= 10;
-    }
-    buffer[pos] = 0;
-    for (int i = 0; i < pos / 2; i++)
-    {
-        buffer[i] ^= buffer[pos - 1 - i];
-        buffer[pos - 1 - i] ^= buffer[i];
-        buffer[i] ^= buffer[pos - 1 - i];
-    }
 }

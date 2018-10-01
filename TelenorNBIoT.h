@@ -77,7 +77,7 @@ class TelenorNBIoT
      * psm_sleep_after_response.
      * 
      */
-    bool powerSaveMode(TelenorNBIoT::power_save_mode psm = psm_sleep_after_send);
+    bool powerSaveMode(power_save_mode psm = psm_sleep_after_send);
 
     /**
      * Returns true when the board is online, ie there's a GPRS connection
@@ -115,6 +115,11 @@ class TelenorNBIoT
     bool createSocket();
 
     /**
+     * Receive data.
+     */
+    bool receive(char *buffer, uint16_t *length, uint16_t *remain = NULL);
+
+    /**
      * Receive any pending data. If there's no data available it will yield an
      * error. The IP address and port of the originating server will be placed
      * in the ipport parameter. If the parameter is NULL they won't be set. The
@@ -125,17 +130,12 @@ class TelenorNBIoT
     /**
      * Send UDP packet to remote IP address.
      */
-    bool sendBytes(IPAddress remoteIP, const uint16_t port, const char data[], const uint16_t length);
+    bool sendBytes(IPAddress remoteIP, const uint16_t port, const char *data, const uint16_t length);
     
     /**
      * Send a string as a UDP packet to remote IP address.
      */
     bool sendString(IPAddress remoteIP, const uint16_t port, String str);
-
-    /**
-     * Receive data.
-     */
-    bool receive(char *buffer, uint16_t *length, uint16_t *remain = NULL);
 
     /**
      * Close the socket. This will release any resources allocated on the
@@ -159,7 +159,7 @@ class TelenorNBIoT
      */
     int rssi();
 
-    enum t_registrationStatus {
+    enum registrationStatus_t {
         RS_UNKNOWN = 0,
         RS_NOT_REGISTERED,
         RS_REGISTERED,
@@ -167,19 +167,9 @@ class TelenorNBIoT
         RS_DENIED,
     };
 
-    t_registrationStatus registrationStatus();
+    registrationStatus_t registrationStatus();
     bool isRegistered();
     bool isRegistering();
-
-    /**
-     * Helper function to convert IMSI and IMEI strings into 64 bit integers.
-     */
-    unsigned long long atoi64(const char *str);
-
-    /**
-     * Helper function to convert IMSI and IMEI numbers into strings.
-     */
-    void i64toa(unsigned long long val, char *buffer);
 
   private:
     int16_t _socket;
@@ -198,7 +188,7 @@ class TelenorNBIoT
     void writeCommand(const char *cmd);
     void drain();
     bool setNetworkOperator(uint8_t, uint8_t);
-    bool setAccessPointName(String);
+    bool setAccessPointName(const char *accessPointName);
     bool isOK(const char *line);
     bool isError(const char *line);
     int splitFields(char *line, char **fields);
