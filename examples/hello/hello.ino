@@ -14,8 +14,8 @@
 
 ***********************************************************************/
 
-#include <TelenorNBIoT.h>
 #include <Udp.h>
+#include <TelenorNBIoT.h>
 
 // Configure mobile country code, mobile network code and access point name
 // See https://www.mcc-mnc.com/ for country and network codes
