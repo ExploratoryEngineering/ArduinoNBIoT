@@ -17,22 +17,6 @@
 #include <TelenorNBIoT.h>
 #include <Udp.h>
 
-#ifdef SERIAL_PORT_HARDWARE_OPEN
-/*
- * For Arduino boards with a hardware serial port separate from USB serial.
- * This is usually mapped to Serial1. Check which pins are used for Serial1 on
- * the board you're using.
- */
-#define nbiotSerial SERIAL_PORT_HARDWARE_OPEN
-#else
-/*
- * For Arduino boards with only one hardware serial port (like Arduino UNO). It
- * is mapped to USB, so we use SoftwareSerial on pin 10 and 11 instead.
- */
-#include <SoftwareSerial.h>
-SoftwareSerial nbiotSerial(10, 11);
-#endif
-
 // Configure mobile country code, mobile network code and access point name
 // See https://www.mcc-mnc.com/ for country and network codes
 // Mobile Country Code: 242 (Norway)
@@ -50,7 +34,7 @@ void setup() {
 
   Serial.print("Connecting to NB-IoT module...\n");
   nbiotSerial.begin(9600);
-  nbiot.begin(nbiotSerial);
+  nbiot.begin();
   
   /*
    * You neeed the IMEI and IMSI when setting up a device in our developer

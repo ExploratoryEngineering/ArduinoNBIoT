@@ -35,6 +35,10 @@
 #define DEFAULT_TIMEOUT 2000
 #define LOCAL_PORT 8000
 
+#ifndef SERIAL_PORT_HARDWARE_OPEN
+SoftwareSerial nbiotSerial(10, 11);
+#endif
+
 TelenorNBIoT::TelenorNBIoT(uint16_t mobileCountryCode, uint16_t mobileNetworkCode, String accessPointName)
 {
     _socket = -1;
