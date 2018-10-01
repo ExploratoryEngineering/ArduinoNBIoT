@@ -17,12 +17,7 @@
 #include <Udp.h>
 #include <TelenorNBIoT.h>
 
-// Configure mobile country code, mobile network code and access point name
-// See https://www.mcc-mnc.com/ for country and network codes
-// Mobile Country Code: 242 (Norway)
-// Mobile Network Operator: 01 (Telenor)
-// Access Point Namme: mda.ee (Telenor NB-IoT Developer Platform)
-TelenorNBIoT nbiot(242, 01, "mda.ee");
+TelenorNBIoT nbiot;
 
 // The remote IP address to send data packets to
 // u-blox SARA N2 does not support DNS

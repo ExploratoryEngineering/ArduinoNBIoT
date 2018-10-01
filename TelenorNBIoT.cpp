@@ -39,7 +39,7 @@
 SoftwareSerial nbiotSerial(10, 11);
 #endif
 
-TelenorNBIoT::TelenorNBIoT(uint16_t mobileCountryCode, uint16_t mobileNetworkCode, String accessPointName)
+TelenorNBIoT::TelenorNBIoT(String accessPointName, uint16_t mobileCountryCode, uint16_t mobileNetworkCode)
 {
     _socket = -1;
     _imei = "";
@@ -68,14 +68,23 @@ bool TelenorNBIoT::begin(Stream &serial)
 
 bool TelenorNBIoT::setNetworkOperator(uint8_t mobileCountryCode, uint8_t mobileNetworkCode)
 {
-    char buffer[40];
-    sprintf(buffer, "COPS=1,2,\"%d%02d\"", mobileCountryCode, mobileNetworkCode);
-    writeCommand(buffer);
+    if (mobileCountryCode > 0 && mobileNetworkCode > 0) {
+        char buffer[40];
+        sprintf(buffer, "COPS=1,2,\"%d%02d\"", mobileCountryCode, mobileNetworkCode);
+        writeCommand(buffer);
+    } else {
+        writeCommand("COPS=0");
+    }
     return readCommand(lines) == 1 && isOK(lines[0]);
 }
 
 bool TelenorNBIoT::setAccessPointName(String accessPointName)
 {
+    if (accessPointName == "") {
+        // If the APN is blank, don't override the network default PDP context
+        return true;
+    }
+    
     sprintf(buffer, "CGDCONT=1,\"IP\",\"%s\"", accessPointName.c_str());
     writeCommand(buffer);
     if (readCommand(lines) == 1 && !isOK(lines[0])) {
