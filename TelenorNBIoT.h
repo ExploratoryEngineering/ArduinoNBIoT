@@ -123,14 +123,12 @@ class TelenorNBIoT
     bool receiveFrom(char *ip, uint16_t *port, char *buffer, uint16_t *length, uint16_t *remain = NULL);
 
     /**
-     * Send UDP packet to remote IP address. Also handles with opening and
-     * closing of a socket.
+     * Send UDP packet to remote IP address.
      */
     bool sendBytes(IPAddress remoteIP, const uint16_t port, const char data[], const uint16_t length);
     
     /**
-     * Send a string as a UDP packet to remote IP address. Also handles with
-     * opening and closing of a socket.
+     * Send a string as a UDP packet to remote IP address.
      */
     bool sendString(IPAddress remoteIP, const uint16_t port, String str);
 
