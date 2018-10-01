@@ -16,6 +16,8 @@
 #ifndef TELENOR_NBIOT_H
 #define TELENOR_NBIOT_H
 
+#include <Arduino.h>
+
 #ifdef SERIAL_PORT_HARDWARE_OPEN
 /*
  * For Arduino boards with a hardware serial port separate from USB serial.
