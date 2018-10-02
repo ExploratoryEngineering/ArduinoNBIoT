@@ -42,6 +42,8 @@ void setup() {
   Serial.println(nbiot.imsi());
   Serial.print("IMEI: ");
   Serial.println(nbiot.imei());
+
+  nbiot.createSocket();
 }
 
 void loop() {
@@ -49,13 +51,11 @@ void loop() {
     // Successfully connected to the network
 
     // Send message to remote server
-    nbiot.createSocket();
     if (true == nbiot.sendString(remoteIP, REMOTE_PORT, "Hello, this is Arduino calling")) {
       Serial.println("Successfully sent data");
     } else {
       Serial.println("Failed sending data");
     }
-    nbiot.closeSocket();
 
     // Wait 15 minutes before sending again
     delay(15 * 60 * 1000);
