@@ -44,8 +44,8 @@ SoftwareSerial nbiotSerial(10, 11);
 // Access Point Namme: mda.ee (Telenor NB-IoT Developer Platform)
 TelenorNBIoT nbiot(242, 01, "mda.ee");
 
-IPAddress remoteIP(172, 16, 7, 197);
-int REMOTE_PORT = 31415;
+IPAddress remoteIP(172, 16, 15, 14);
+int REMOTE_PORT = 1234;
 
 void setup() {
   Serial.begin(9600);

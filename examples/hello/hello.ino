@@ -21,8 +21,8 @@ TelenorNBIoT nbiot;
 
 // The remote IP address to send data packets to
 // u-blox SARA N2 does not support DNS
-IPAddress remoteIP(172, 16, 7, 197);
-int REMOTE_PORT = 31415;
+IPAddress remoteIP(172, 16, 15, 14);
+int REMOTE_PORT = 1234;
 
 void setup() {
   Serial.begin(9600);
