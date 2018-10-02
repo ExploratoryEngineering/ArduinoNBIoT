@@ -18,12 +18,7 @@
 
 #include <Arduino.h>
 
-#ifdef SerialSARA
-/*
- * Use the serial port mapped to u-blox SARA if it it exists.
- */
-#define nbiotSerial SerialSARA
-#elif defined(SERIAL_PORT_HARDWARE_OPEN)
+#ifdef SERIAL_PORT_HARDWARE_OPEN
 /*
  * For Arduino boards with a hardware serial port separate from USB serial.
  * This is usually mapped to Serial1. Check which pins are used for Serial1 on
