@@ -58,6 +58,7 @@ bool TelenorNBIoT::begin(Stream &serial)
     // commands.
     ublox->setTimeout(DEFAULT_TIMEOUT);
     while (!ublox) {}
+    drain();
     reboot();
 
     return online() &&
@@ -478,12 +479,7 @@ void TelenorNBIoT::writeCommand(const char *cmd)
 {
     uint8_t n = 0;
     drain();
-    while (ublox->available())
-    {
-        buffer[n++] = ublox->read();
-    }
-
-    // TODO(stalehd): Process incoming data (if any)
+    
     ublox->print(PREFIX);
     ublox->print(cmd);
     ublox->print(POSTFIX);
