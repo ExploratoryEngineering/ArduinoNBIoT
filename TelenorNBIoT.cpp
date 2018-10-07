@@ -73,13 +73,14 @@ bool TelenorNBIoT::setNetworkOperator(uint8_t mobileCountryCode, uint8_t mobileN
         writeCommand(buffer);
     } else {
         writeCommand("COPS=0");
+        return true;
     }
     return readCommand(lines) == 1 && isOK(lines[0]);
 }
 
 bool TelenorNBIoT::setAccessPointName(const char *accessPointName)
 {
-    if (strcmp(accessPointName, "")) {
+    if (strlen(accessPointName) == 0) {
         // If the APN is blank, don't override the network default PDP context
         return true;
     }
