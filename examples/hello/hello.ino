@@ -17,6 +17,26 @@
 #include <Udp.h>
 #include <TelenorNBIoT.h>
 
+/**********************************************************************
+   Selecting u-blox serial port
+   
+   The communication between the Arduino board and the u-blox NB-IoT
+   module uses serial communication. When you write Serial.print(...)
+   in Arduino it sends a message over USB (Universal Serial Bus) to
+   your computer. Arduino UNO only have the USB serial port, so then
+   we have to use SoftwareSerial to create extra serial ports. Most
+   other boards have extra hardware serial ports (Serial1, Serial2,
+   etc). So for those it's better to use a hardware serial port. Check
+   your board documentation what ports you have and what pins they are
+   mapped to, then comment/uncomment below.
+***********************************************************************/
+// For Arduino Uno and other boards with only USB serial:
+#include <SoftwareSerial.h>
+SoftwareSerial ublox(10, 11);
+// When the Arduino board has extra hardware serial ports, comment out
+// the 2 SoftwareSerial-lines above and uncomment the line below:
+//#define ublox Serial1
+
 TelenorNBIoT nbiot;
 
 // The remote IP address to send data packets to
@@ -28,8 +48,8 @@ void setup() {
   Serial.begin(9600);
 
   Serial.print("Connecting to NB-IoT module...\n");
-  nbiotSerial.begin(9600);
-  nbiot.begin();
+  ublox.begin(9600);
+  nbiot.begin(ublox);
   
   /*
    * You neeed the IMEI and IMSI when setting up a device in our developer

@@ -16,24 +16,6 @@
 #ifndef TELENOR_NBIOT_H
 #define TELENOR_NBIOT_H
 
-#include <Arduino.h>
-
-#ifdef SERIAL_PORT_HARDWARE_OPEN
-/*
- * For Arduino boards with a hardware serial port separate from USB serial.
- * This is usually mapped to Serial1. Check which pins are used for Serial1 on
- * the board you're using.
- */
-#define nbiotSerial SERIAL_PORT_HARDWARE_OPEN
-#else
-/*
- * For Arduino boards with only one hardware serial port (like Arduino UNO). It
- * is mapped to USB, so we use SoftwareSerial on pin 10 and 11 instead.
- */
-#include <SoftwareSerial.h>
-extern SoftwareSerial nbiotSerial;
-#endif
-
 #include <Udp.h>
 
 // IP address for the Horde backend
@@ -68,7 +50,7 @@ class TelenorNBIoT
     /**
      * Initialize the module with the specified baud rate. The default is 9600.
      */
-    bool begin(Stream &serial = nbiotSerial);
+    bool begin(Stream &serial);
 
     /**
      * Set the module power save mode.
