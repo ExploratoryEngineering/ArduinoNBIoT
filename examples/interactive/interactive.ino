@@ -21,6 +21,7 @@
  */
 #include "TelenorNBIoT.h"
 
+// Magic for selecting serial port
 #ifdef SERIAL_PORT_HARDWARE_OPEN
 /*
  * For Arduino boards with a hardware serial port separate from USB serial.
@@ -39,10 +40,10 @@ SoftwareSerial nbiotSerial(10, 11);
 
 // Configure mobile country code, mobile network code and access point name
 // See https://www.mcc-mnc.com/ for country and network codes
+// Access Point Namme: mda.ee (Telenor NB-IoT Developer Platform)
 // Mobile Country Code: 242 (Norway)
 // Mobile Network Operator: 01 (Telenor)
-// Access Point Namme: mda.ee (Telenor NB-IoT Developer Platform)
-TelenorNBIoT nbiot(242, 01, "mda.ee");
+TelenorNBIoT nbiot("mda.ee", 242, 01);
 
 IPAddress remoteIP(172, 16, 15, 14);
 int REMOTE_PORT = 1234;
