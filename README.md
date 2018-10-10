@@ -6,18 +6,6 @@ This is a library to make the NB-IoT breakouts from
 It integrates with the backend service at https://nbiot.engineering/.
 The `sendBytes` and `sendString` functions can be used to send data to remote servers.
 
-The module must be running the uBlox firmware 06.57 or later. Connect to the
-module via a serial cable and issue the command `AT+CGMR` to see the firmware
-version:
-
-```text
-AT+CGMR
-
-06.57
-
-OK
-```
-
 ## Installing the library
 
 Click the green «Clone or Download» button, then «Download ZIP». Add it in the
