@@ -155,8 +155,8 @@ class TelenorNBIoT
 
   private:
     int16_t _socket;
-    char *_imei;
-    char *_imsi;
+    char _imei[16];
+    char _imsi[16];
     uint16_t mcc;
     uint16_t mnc;
     char apn[30];

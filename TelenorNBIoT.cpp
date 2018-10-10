@@ -38,8 +38,8 @@
 TelenorNBIoT::TelenorNBIoT(String accessPointName, uint16_t mobileCountryCode, uint16_t mobileNetworkCode)
 {
     _socket = -1;
-    _imei = "";
-    _imsi = "";
+    memset(_imei,'\0', 16);
+    memset(_imsi,'\0', 16);
 
     mcc = mobileCountryCode;
     mnc = mobileNetworkCode;
@@ -149,13 +149,14 @@ bool TelenorNBIoT::isRegistering()
 
 String TelenorNBIoT::imei()
 {
-    if (_imei == "")
+    if (strlen(_imei) != 15)
     {
         writeCommand(IMEI);
         if (readCommand(lines) == 2 && isOK(lines[1]))
         {
             // Line 1 contains IMEI ("+CGSN: <15-digit IMEI>")
-            _imei = lines[0] + 7;
+            char *ptr = lines[0] + 7;
+            memcpy(_imei, ptr, strlen(ptr) + 1);
         }
     }
     return String(_imei);
@@ -163,17 +164,17 @@ String TelenorNBIoT::imei()
 
 String TelenorNBIoT::imsi()
 {
-    if (_imsi == "")
-        {
+    if (strlen(_imsi) != 15)
+    {
         writeCommand(IMSI);
         if (readCommand(lines) == 2 && isOK(lines[1]))
         {
             // Line contains IMSI ("<15 digit IMSI>")
-            _imsi = lines[0];
-            }
+            memcpy(_imsi, lines[0], strlen(lines[0]) + 1);
+        }
     }
     return String(_imsi);
-    }
+}
 
 bool TelenorNBIoT::createSocket()
 {
@@ -448,25 +449,39 @@ uint8_t TelenorNBIoT::readCommand(char **lines)
     while (read > 0 && !completed && lineno < MAXLINES)
     {
         read = ublox->readBytesUntil('\n', (buffer + offset), (BUFSIZE - offset));
-        buffer[offset + read] = 0;
-        if (read > 0)
+        if (read == 1 && buffer[offset] == '\r')
         {
-            if (strlen(buffer + offset) > 1)
-            { // Line will contain a single \r
-                lines[lineno++] = (buffer + offset);
+                offset += 1;
+        }
+        else if (read > 0)
+        {
+            lines[lineno] = (buffer + offset);
+            if (buffer[offset + read - 1] == '\r')
+            {
+                // replace carrige-return with string terminator
+                buffer[offset + read - 1] = 0;
+                offset += (read);
+            } else {
+                // insert string terminator after last read char
+                buffer[offset + read] = 0;
+                offset += (read + 1);
             }
+            
+            
             // Exit if line is "OK" - this is the end of the response
-            if (isOK(buffer + offset))
+            if (isOK(lines[lineno]))
             {
                 completed = true;
             }
             // ...or if line is "ERROR"
-            if (isError(buffer + offset))
+            if (isError(lines[lineno]))
             {
                 completed = true;
             }
+
+            lineno++;
         }
-        offset += (read + 1); // +1 is for the 0-terminated char
+        
     }
     return lineno;
 }
