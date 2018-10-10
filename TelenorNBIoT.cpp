@@ -39,8 +39,8 @@
 TelenorNBIoT::TelenorNBIoT(String accessPointName, uint16_t mobileCountryCode, uint16_t mobileNetworkCode)
 {
     _socket = -1;
-    memset(_imei,'\0', 16);
-    memset(_imsi,'\0', 16);
+    memset(_imei, 0, 16);
+    memset(_imsi, 0, 16);
 
     mcc = mobileCountryCode;
     mnc = mobileNetworkCode;
@@ -150,14 +150,14 @@ bool TelenorNBIoT::isRegistering()
 
 String TelenorNBIoT::imei()
 {
-    if (strlen(_imei) != 15)
+    if (strnlen(_imei, sizeof _imei) != 15)
     {
         writeCommand(IMEI);
         if (readCommand(lines) == 2 && isOK(lines[1]))
         {
             // Line 1 contains IMEI ("+CGSN: <15-digit IMEI>")
             char *ptr = lines[0] + 7;
-            memcpy(_imei, ptr, strlen(ptr) + 1);
+            memcpy(_imei, ptr, strnlen(ptr, 15) + 1);
         }
     }
     return String(_imei);
@@ -165,13 +165,13 @@ String TelenorNBIoT::imei()
 
 String TelenorNBIoT::imsi()
 {
-    if (strlen(_imsi) != 15)
+    if (strnlen(_imsi, sizeof _imsi) != 15)
     {
         writeCommand(IMSI);
         if (readCommand(lines) == 2 && isOK(lines[1]))
         {
             // Line contains IMSI ("<15 digit IMSI>")
-            memcpy(_imsi, lines[0], strlen(lines[0]) + 1);
+            memcpy(_imsi, lines[0], strnlen(lines[0], 15) + 1);
         }
     }
     return String(_imsi);
