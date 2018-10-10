@@ -28,14 +28,14 @@
  * This is usually mapped to Serial1. Check which pins are used for Serial1 on
  * the board you're using.
  */
-#define nbiotSerial SERIAL_PORT_HARDWARE_OPEN
+#define ublox SERIAL_PORT_HARDWARE_OPEN
 #else
 /*
  * For Arduino boards with only one hardware serial port (like Arduino UNO). It
  * is mapped to USB, so we use SoftwareSerial on pin 10 and 11 instead.
  */
 #include <SoftwareSerial.h>
-SoftwareSerial nbiotSerial(10, 11);
+SoftwareSerial ublox(10, 11);
 #endif
 
 // Configure mobile country code, mobile network code and access point name
@@ -53,8 +53,8 @@ void setup() {
   while (!Serial) ;
   printHelp();
 
-  nbiotSerial.begin(9600);
-  nbiot.begin(nbiotSerial);
+  ublox.begin(9600);
+  nbiot.begin(ublox);
 }
 
 void printHelp() {
