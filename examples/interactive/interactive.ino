@@ -67,6 +67,7 @@ void printHelp() {
   Serial.println(F("r. . . . . ReciveFrom"));
   Serial.println(F("i. . . . . IMEI"));
   Serial.println(F("I. . . . . IMSI"));
+  Serial.println(F("f. . . . . Firmware version"));
   Serial.println(F("x. . . . . error command"));
   Serial.println(F("b. . . . . reboot"));
   Serial.println(F("o. . . . . Go online"));
@@ -102,6 +103,11 @@ void loop() {
       case 'I':
         Serial.print(F("IMSI = "));
         Serial.println(nbiot.imsi());
+        break;
+
+      case 'f':
+        Serial.print(F("Firmware version = "));
+        Serial.println(nbiot.firmwareVersion());
         break;
 
       case 'n':

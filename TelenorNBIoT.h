@@ -141,6 +141,11 @@ class TelenorNBIoT
      */
     int rssi();
 
+    /**
+     * Returns the u-blox SARA firmware Version
+     */
+    String firmwareVersion();
+
     enum registrationStatus_t {
         RS_UNKNOWN = 0,
         RS_NOT_REGISTERED,

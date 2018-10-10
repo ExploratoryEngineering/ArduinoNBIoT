@@ -32,6 +32,7 @@
 #define RADIO_OFF "CFUN=0"
 #define SIGNAL_STRENGTH "CSQ"
 #define CONNECT_DATA "CGATT=1"
+#define FIRMWARE "CGMR"
 #define DEFAULT_TIMEOUT 2000
 #define LOCAL_PORT 8000
 
@@ -251,6 +252,17 @@ int TelenorNBIoT::rssi()
       return rssi;
     }
     return -113 + rssi * 2;
+}
+
+String TelenorNBIoT::firmwareVersion()
+{
+    writeCommand(FIRMWARE);
+    int ret = readCommand(lines);
+    if (ret != 2 || !isOK(lines[1]))
+    {
+        return "ERROR";
+    }
+    return String(lines[0]);
 }
 
 void TelenorNBIoT::writeBuffer(const char *data, uint16_t length)
