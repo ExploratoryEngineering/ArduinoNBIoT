@@ -18,7 +18,6 @@
 #include <TelenorNBIoT.h>
 
 #ifdef SERIAL_PORT_HARDWARE_OPEN
-#define TX_PIN 11
 /*
  * For Arduino boards with a hardware serial port separate from USB serial.
  * This is usually mapped to Serial1. Check which pins are used for Serial1 on
