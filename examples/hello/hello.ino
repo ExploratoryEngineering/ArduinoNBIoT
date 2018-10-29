@@ -17,25 +17,21 @@
 #include <Udp.h>
 #include <TelenorNBIoT.h>
 
-/**********************************************************************
-   Selecting u-blox serial port
-   
-   The communication between the Arduino board and the u-blox NB-IoT
-   module uses serial communication. When you write Serial.print(...)
-   in Arduino it sends a message over USB (Universal Serial Bus) to
-   your computer. Arduino UNO only have the USB serial port, so then
-   we have to use SoftwareSerial to create extra serial ports. Most
-   other boards have extra hardware serial ports (Serial1, Serial2,
-   etc). So for those it's better to use a hardware serial port. Check
-   your board documentation what ports you have and what pins they are
-   mapped to, then comment/uncomment below.
-***********************************************************************/
-// For Arduino Uno and other boards with only USB serial:
+#ifdef SERIAL_PORT_HARDWARE_OPEN
+/*
+ * For Arduino boards with a hardware serial port separate from USB serial.
+ * This is usually mapped to Serial1. Check which pins are used for Serial1 on
+ * the board you're using.
+ */
+#define ublox SERIAL_PORT_HARDWARE_OPEN
+#else
+/*
+ * For Arduino boards with only one hardware serial port (like Arduino UNO). It
+ * is mapped to USB, so we use SoftwareSerial on pin 10 and 11 instead.
+ */
 #include <SoftwareSerial.h>
 SoftwareSerial ublox(10, 11);
-// When the Arduino board has extra hardware serial ports, comment out
-// the 2 SoftwareSerial-lines above and uncomment the line below:
-//#define ublox Serial1
+#endif
 
 TelenorNBIoT nbiot;
 
