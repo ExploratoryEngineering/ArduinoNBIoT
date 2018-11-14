@@ -74,7 +74,7 @@ void loop() {
     }
 
     // Wait 15 minutes before sending again
-    delay(15 * 60 * 1000);
+    delay(1UL * 15*60*1000);
   } else {
     // Not connected yet. Wait 5 seconds before retrying.
     Serial.println("Connecting...");
