@@ -39,6 +39,7 @@ TelenorNBIoT nbiot;
 // u-blox SARA N2 does not support DNS
 IPAddress remoteIP(172, 16, 15, 14);
 int REMOTE_PORT = 1234;
+unsigned long INTERVAL_MS = (unsigned long) 15 * 60 * 1000;
 
 void setup() {
   Serial.begin(9600);
@@ -74,7 +75,7 @@ void loop() {
     }
 
     // Wait 15 minutes before sending again
-    delay(1UL * 15*60*1000);
+    delay(INTERVAL_MS);
   } else {
     // Not connected yet. Wait 5 seconds before retrying.
     Serial.println("Connecting...");
