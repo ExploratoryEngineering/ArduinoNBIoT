@@ -219,17 +219,13 @@ bool TelenorNBIoT::reboot()
 bool TelenorNBIoT::online()
 {
     writeCommand(RADIO_ON);
-    return (readCommand(lines) == 1 && isOK(lines[0]));
+    return readCommand(lines) == 1 && isOK(lines[0]);
 }
 
 bool TelenorNBIoT::offline()
 {
     writeCommand(RADIO_OFF);
-    if (readCommand(lines) == 1 && isOK(lines[0]))
-    {
-        return true;
-    }
-    return false;
+    return readCommand(lines) == 1 && isOK(lines[0]);
 }
 
 int TelenorNBIoT::rssi()
