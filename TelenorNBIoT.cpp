@@ -392,7 +392,8 @@ bool TelenorNBIoT::powerSaveMode(power_save_mode psm)
 {
     m_psm = psm;
 
-    if (m_psm == psm_sleep_after_send || m_psm == psm_sleep_after_response) {
+    if (m_psm == psm_sleep_after_send || m_psm == psm_sleep_after_response)
+    {
         // disable eDRX
         writeCommand("CEDRXS=3,5");
 
@@ -404,12 +405,19 @@ bool TelenorNBIoT::powerSaveMode(power_save_mode psm)
         // Requested Active Time (T3324) - 
         writeCommand("CPSMS=1,,,\"01000001\",\"00000000\"");
         return (readCommand(lines) == 1 && isOK(lines[0]));
-    } else {
+    }
+    else
+    {
         // set eDRX to default value
-        writeCommand("CEDRXS=0");
+        writeCommand("CEDRXS=0,5");
+        if (readCommand(lines) != 1 || !isOK(lines[1]))
+        {
+            return false;
+        }
 
         // disable Power Save Mode and reset all PSM parameters to factory values
         writeCommand("CPSMS=2");
+        return (readCommand(lines) == 1 && isOK(lines[0]));
     }
 }
 
