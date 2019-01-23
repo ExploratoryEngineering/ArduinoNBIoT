@@ -18,7 +18,7 @@
 #include <Udp.h>
 
 #define PREFIX "AT+"
-#define POSTFIX "\r\n"
+#define POSTFIX "\r"
 #define SOCR "NSOCR=\"DGRAM\",17,%d,1"
 #define SOSTF "NSOSTF="
 #define SOCL "NSOCL=%d"
