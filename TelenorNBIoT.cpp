@@ -163,7 +163,7 @@ bool TelenorNBIoT::isRegistering()
 
 String TelenorNBIoT::imei()
 {
-    if (strnlen(_imei, sizeof _imei) != 15)
+    while (strnlen(_imei, sizeof _imei) != 15)
     {
         writeCommand(IMEI);
         if (readCommand(lines) == 2 && isOK(lines[1]))
@@ -172,19 +172,27 @@ String TelenorNBIoT::imei()
             char *ptr = lines[0] + 7;
             memcpy(_imei, ptr, strnlen(ptr, 15) + 1);
         }
+        else
+        {
+            delay(100);
+        }
     }
     return String(_imei);
 }
 
 String TelenorNBIoT::imsi()
 {
-    if (strnlen(_imsi, sizeof _imsi) != 15)
+    while (strnlen(_imsi, sizeof _imsi) != 15)
     {
         writeCommand(IMSI);
         if (readCommand(lines) == 2 && isOK(lines[1]))
         {
             // Line contains IMSI ("<15 digit IMSI>")
             memcpy(_imsi, lines[0], strnlen(lines[0], 15) + 1);
+        }
+        else
+        {
+            delay(100);
         }
     }
     return String(_imsi);
