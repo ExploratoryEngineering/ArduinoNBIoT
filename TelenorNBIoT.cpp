@@ -322,8 +322,8 @@ bool TelenorNBIoT::sendTo(const char *ip, const uint16_t port, const char *data,
     if (readCommand(lines) == 2 && isOK(lines[1]))
     {
         char *fields[10];
-        int field = splitFields(lines[0], fields);
-        if (field == 1)
+        int count = splitFields(lines[0], fields);
+        if (count == 2)
         {
             // Found two fields. First is socket no
             uint16_t socketNo = atoi(fields[0]);
@@ -352,14 +352,20 @@ bool TelenorNBIoT::sendString(IPAddress remoteIP, const uint16_t port, String st
 
 bool TelenorNBIoT::receiveFrom(char *ip, uint16_t *port, char *outbuf, uint16_t *length, uint16_t *remain)
 {
+    if (_socket == -1) {
+        return false;
+    }
+    if (length == NULL) {
+        return false;
+    }
     sprintf(buffer, RECVFROM, _socket);
     writeCommand(buffer);
     if (readCommand(lines) == 2 && isOK(lines[1]))
     {
         // Data should be <socket>,<ip>,<port>,<length>,<data>,<remaining length>
         char *fields[10];
-        int field = splitFields(lines[0], fields);
-        if (field == 6)
+        int found = splitFields(lines[0], fields);
+        if (found == 6)
         {
             if (ip != NULL)
             {
@@ -369,9 +375,13 @@ bool TelenorNBIoT::receiveFrom(char *ip, uint16_t *port, char *outbuf, uint16_t 
             {
                 *port = atoi(fields[2]);
             }
+            
             *length = atoi(fields[3]);
-            // TODO(stalehd): Convert data into bytes
-            strcpy(outbuf, fields[4]);
+            char *pos = fields[4];
+            pos++; // inc by 1 to skip double-quote char
+            hexToBytes(pos, *length, outbuf);
+            outbuf[*length] = 0; // end with null-terminator
+            
             if (remain != NULL)
             {
                 *remain = atoi(fields[5]);
@@ -425,19 +435,41 @@ bool TelenorNBIoT::isError(const char *line)
 
 int TelenorNBIoT::splitFields(char *line, char **fields)
 {
-    int found = 0;
+    int found = 1;
     char *p = line;
     fields[0] = line;
-    while (*p++)
+    while (*++p)
     {
         if (*p == ',')
         {
             *p = 0;
-            found++;
-            fields[found] = p + 1;
+            fields[found++] = p + 1;
         }
     }
     return found;
+}
+
+void TelenorNBIoT::hexToBytes(const char *hex, const uint16_t byte_count, char *bytes)
+{
+    const uint16_t hex_count = byte_count*2;
+    for (int i=0; i<hex_count; i++) {
+        char c = hex[i];
+        if (c >= 48 && c <= 57) {
+            c -= 48;
+        } else if (c >= 65 && c <= 70) {
+            c -= 55;
+        } else if (c >= 97 && c <= 102) {
+            c -= 87;
+        } else {
+            c = 0;
+        }
+
+        if (i%2 == 0) {
+            bytes[i/2] = c << 4;
+        } else {
+            bytes[i/2] += c;
+        }
+    }
 }
 
 void TelenorNBIoT::drain()

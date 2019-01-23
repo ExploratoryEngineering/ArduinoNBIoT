@@ -179,6 +179,7 @@ class TelenorNBIoT
     bool isOK(const char *line);
     bool isError(const char *line);
     int splitFields(char *line, char **fields);
+    void hexToBytes(const char *hex, const uint16_t byte_count, char *bytes);
     void writeBuffer(const char *data, uint16_t length);
     bool sendTo(const char *ip, const uint16_t port, const char *data, const uint16_t length);
 };
