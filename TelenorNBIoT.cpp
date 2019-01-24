@@ -46,8 +46,12 @@ TelenorNBIoT::TelenorNBIoT(String accessPointName, uint16_t mobileCountryCode, u
     strcpy(apn, accessPointName.c_str());
 }
 
-bool TelenorNBIoT::begin(Stream &serial)
+bool TelenorNBIoT::begin(Stream &serial, bool _debug)
 {
+    debug = _debug;
+    if (debug) {
+        Serial.println("NB-IoT debug enabled");
+    }
     //Stream &serial
     ublox = &serial;
     // Increase timeout for the module. It might be slow to respond on certain
@@ -511,8 +515,13 @@ void TelenorNBIoT::hexToBytes(const char *hex, const uint16_t byte_count, char *
 
 void TelenorNBIoT::drain()
 {
-    while(ublox->available()) {
-        ublox->read();
+    if (ublox->available()) {
+        if (debug) Serial.println("---DRAINING---");
+        while(ublox->available()) {
+            char c = ublox->read();
+            if (debug) Serial.print(c);
+        }
+        if (debug) Serial.println("--------------");
     }
 }
 
@@ -543,6 +552,11 @@ uint8_t TelenorNBIoT::readCommand(char **lines)
                 buffer[offset + read] = 0;
                 offset += (read + 1);
             }
+
+            if (debug) {
+                Serial.print("Response line: ");
+                Serial.println(lines[lineno]);
+            }
             
             
             // Exit if line is "OK" - this is the end of the response
@@ -569,6 +583,12 @@ void TelenorNBIoT::writeCommand(const char *cmd)
     uint8_t n = 0;
     drain();
     _errCode = -1;
+
+    if (debug) {
+        Serial.print("Write command: ");
+        Serial.print(PREFIX);
+        Serial.println(cmd);
+    }
     
     ublox->print(PREFIX);
     ublox->print(cmd);

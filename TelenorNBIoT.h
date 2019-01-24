@@ -50,7 +50,7 @@ class TelenorNBIoT
     /**
      * Initialize the module with the specified baud rate. The default is 9600.
      */
-    bool begin(Stream &serial);
+    bool begin(Stream &serial, bool debug = false);
 
     /**
      * Set the module power save mode.
@@ -165,6 +165,7 @@ class TelenorNBIoT
     bool isRegistering();
 
   private:
+    bool debug;
     int16_t _socket;
     char _imei[16];
     char _imsi[16];
