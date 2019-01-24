@@ -57,6 +57,13 @@ bool TelenorNBIoT::begin(Stream &serial)
     drain();
     reboot();
 
+    // Enable error codes for u-blox SARA N2 errors
+    bool errorCodesEnabled = false;
+    while (!errorCodesEnabled) {
+        writeCommand("CMEE=1");
+        errorCodesEnabled = readCommand(lines) == 1 && isOK(lines[0]);
+    }
+
     return online() &&
         setNetworkOperator(mcc, mnc) &&
         setAccessPointName(apn);
@@ -248,6 +255,11 @@ int TelenorNBIoT::rssi()
     return -113 + rssi * 2;
 }
 
+int TelenorNBIoT::errorCode()
+{
+    return _errCode;
+}
+
 String TelenorNBIoT::firmwareVersion()
 {
     writeCommand(FIRMWARE);
@@ -436,7 +448,23 @@ bool TelenorNBIoT::isOK(const char *line)
 
 bool TelenorNBIoT::isError(const char *line)
 {
-    return (line[0] == 'E' && line[1] == 'R' && line[2] == 'R' && line[3] == 'O' && line[4] == 'R');
+    int i = 0;
+    if (line[i] == '+') {
+        i = 5;
+    }
+    return (line[i++] == 'E' && line[i++] == 'R' && line[i++] == 'R' && line[i++] == 'O' && line[i++] == 'R');
+}
+
+int TelenorNBIoT::parseErrorCode(const char *line)
+{
+    if (!isError(line)) {
+        return -1;
+    } else if (line[0] != '+') {
+        return -2;
+    }
+    line += 12;
+    int errCode = atoi(line);
+    return errCode;
 }
 
 int TelenorNBIoT::splitFields(char *line, char **fields)
@@ -523,6 +551,7 @@ uint8_t TelenorNBIoT::readCommand(char **lines)
             if (isError(lines[lineno]))
             {
                 completed = true;
+                _errCode = parseErrorCode(lines[lineno]);
             }
 
             lineno++;
@@ -536,6 +565,7 @@ void TelenorNBIoT::writeCommand(const char *cmd)
 {
     uint8_t n = 0;
     drain();
+    _errCode = -1;
     
     ublox->print(PREFIX);
     ublox->print(cmd);
