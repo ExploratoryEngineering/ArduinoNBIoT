@@ -91,10 +91,10 @@ class TelenorNBIoT
     String imsi();
 
     /**
-     * Create a new socket. Call this before attempting to send data with the
-     * module.
+     * Create a new socket. Call this before attempting to send or receive data
+     * with the module. Optionally specify what port to listen on.
      */
-    bool createSocket();
+    bool createSocket(const uint16_t listenPort = 1234);
 
     /**
      * Receive data.

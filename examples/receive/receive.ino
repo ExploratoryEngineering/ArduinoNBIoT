@@ -34,10 +34,8 @@ SoftwareSerial ublox(10, 11);
 
 TelenorNBIoT nbiot;
 
-// The remote IP address to send data packets to
-// u-blox SARA N2 does not support DNS
-IPAddress remoteIP(172, 16, 15, 14);
-int REMOTE_PORT = 1234;
+// What port to listen on for receiving data
+int LOCAL_PORT = 1234;
 
 void setup() {
   Serial.begin(9600);
@@ -60,7 +58,7 @@ void setup() {
   Serial.println(nbiot.imei());
 
   nbiot.powerSaveMode(TelenorNBIoT::psm_always_on);
-  nbiot.createSocket();
+  nbiot.createSocket(LOCAL_PORT);
 
   Serial.println("Waiting for downstream messages");
 }

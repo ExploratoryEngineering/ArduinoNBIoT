@@ -34,7 +34,6 @@
 #define CONNECT_DATA "CGATT=1"
 #define FIRMWARE "CGMR"
 #define DEFAULT_TIMEOUT 2000
-#define LOCAL_PORT 8000
 
 TelenorNBIoT::TelenorNBIoT(String accessPointName, uint16_t mobileCountryCode, uint16_t mobileNetworkCode)
 {
@@ -176,11 +175,11 @@ String TelenorNBIoT::imsi()
     return String(_imsi);
 }
 
-bool TelenorNBIoT::createSocket()
+bool TelenorNBIoT::createSocket(const uint16_t listenPort)
 {
     if (_socket == -1)
     {
-        sprintf(buffer, SOCR, LOCAL_PORT);
+        sprintf(buffer, SOCR, listenPort);
         writeCommand(buffer);
         if (readCommand(lines) == 2 && isOK(lines[1]))
         {
