@@ -71,7 +71,6 @@ bool TelenorNBIoT::setNetworkOperator(uint8_t mobileCountryCode, uint8_t mobileN
         writeCommand(buffer);
     } else {
         writeCommand("COPS=0");
-        return true;
     }
     return readCommand(lines) == 1 && isOK(lines[0]);
 }
