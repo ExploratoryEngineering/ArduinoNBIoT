@@ -436,7 +436,7 @@ bool TelenorNBIoT::powerSaveMode(power_save_mode psm)
     {
         // set eDRX to default value
         writeCommand("CEDRXS=0,5");
-        if (readCommand(lines) != 1 || !isOK(lines[1]))
+        if (readCommand(lines) != 1 || !isOK(lines[0]))
         {
             return false;
         }
