@@ -142,6 +142,12 @@ class TelenorNBIoT
     int rssi();
 
     /**
+     * Get the error code of the previous command. See Appendix A in the SARA
+     * N2 AT Commands guide for the description of each error code.
+     */
+    int errorCode();
+
+    /**
      * Returns the u-blox SARA firmware Version
      */
     String firmwareVersion();
@@ -169,6 +175,7 @@ class TelenorNBIoT
     char buffer[BUFSIZE];
     char *lines[MAXLINES];
     power_save_mode m_psm;
+    int _errCode = -1;
 
     bool dataOn();
     uint8_t readCommand(char **lines);
@@ -178,6 +185,7 @@ class TelenorNBIoT
     bool setAccessPointName(const char *accessPointName);
     bool isOK(const char *line);
     bool isError(const char *line);
+    int parseErrorCode(const char *line);
     int splitFields(char *line, char **fields);
     void hexToBytes(const char *hex, const uint16_t byte_count, char *bytes);
     void writeBuffer(const char *data, uint16_t length);
