@@ -58,10 +58,12 @@ bool TelenorNBIoT::begin(Stream &serial)
     reboot();
 
     // Enable error codes for u-blox SARA N2 errors
-    bool errorCodesEnabled = false;
-    while (!errorCodesEnabled) {
+    while (true) {
         writeCommand("CMEE=1");
-        errorCodesEnabled = readCommand(lines) == 1 && isOK(lines[0]);
+        if (readCommand(lines) == 1 && isOK(lines[0])) {
+            break;
+        }
+        delay(100);
     }
 
     return online() &&
