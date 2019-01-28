@@ -476,10 +476,8 @@ int TelenorNBIoT::parseErrorCode(const char *line)
 int TelenorNBIoT::splitFields(char *line, char **fields)
 {
     int found = 1;
-    char *p = line;
     fields[0] = line;
-    while (*++p)
-    {
+    for(char *p = line; *p != '\0'; p++) {
         if (*p == ',')
         {
             *p = 0;
