@@ -34,6 +34,9 @@
 #define SIGNAL_STRENGTH "CSQ"
 #define CONNECT_DATA "CGATT=1"
 #define FIRMWARE "CGMR"
+#define READ_APN "CGDCONT?"
+#define SET_APN "CGDCONT=%d,\"IP\",\"%s\""
+#define CONFIG_AUTOCONN "NCONFIG=\"AUTOCONNECT\",\"%s\""
 #define DEFAULT_TIMEOUT 2000
 
 int splitFields(char *line, char **fields, uint8_t maxFields);
@@ -65,6 +68,11 @@ bool TelenorNBIoT::begin(Stream &serial, bool _debug)
     drain();
     reboot();
 
+    // Make sure the correct APN is set
+    while (!ensureAccessPointName(apn)) {
+        delay(100);
+    }
+
     // Enable error codes for u-blox SARA N2 errors
     while (true) {
         writeCommand("CMEE=1");
@@ -75,8 +83,7 @@ bool TelenorNBIoT::begin(Stream &serial, bool _debug)
     }
 
     return online() &&
-        setNetworkOperator(mcc, mnc) &&
-        setAccessPointName(apn);
+        setNetworkOperator(mcc, mnc);
 }
 
 bool TelenorNBIoT::setNetworkOperator(uint8_t mobileCountryCode, uint8_t mobileNetworkCode)
@@ -91,20 +98,82 @@ bool TelenorNBIoT::setNetworkOperator(uint8_t mobileCountryCode, uint8_t mobileN
     return readCommand(lines) == 1 && isOK(lines[0]);
 }
 
+bool TelenorNBIoT::ensureAccessPointName(const char *accessPointName)
+{
+    char *currentAPN = readAccessPointName();
+    if (currentAPN != NULL && strcmp(currentAPN, accessPointName) == 0)
+    {
+        return true;
+    }
+    return setAccessPointName(accessPointName);
+}
+
+char* TelenorNBIoT::readAccessPointName()
+{
+    writeCommand(READ_APN);
+    int count = readCommand(lines);
+    if (!isOK(lines[count-1]))
+    {
+        return NULL;
+    }
+
+    // We only care about context ID 0, but the contexts might be out of order,
+    // so we have too loop through all to make sure we find it.
+    for (uint8_t i=0; i<count-1; i++)
+    {
+        // +CGDCONT: 0,"IP","mda.ee",,0,0,,,,,1
+        char* fields[3];
+        if (splitFields(lines[i] + 10, fields, 3) >=3)
+        {
+            int contextId = atoi(fields[0]);
+            char* apn = fields[2];
+            
+            if (contextId == 0)
+            {
+                return apn;
+            }
+        }
+    }
+
+    return NULL;
+}
+
 bool TelenorNBIoT::setAccessPointName(const char *accessPointName)
 {
-    if (strlen(accessPointName) == 0) {
+    if (strlen(accessPointName) == 0)
+    {
         // If the APN is blank, don't override the network default PDP context
         return true;
     }
-    
-    sprintf(buffer, "CGDCONT=1,\"IP\",\"%s\"", accessPointName);
-    writeCommand(buffer);
-    if (readCommand(lines) == 1 && !isOK(lines[0])) {
+
+    if (!setAutoConnect(false) || !reboot())
+    {
         return false;
     }
 
-    writeCommand("CGACT=1,1");
+    int8_t retries = 3;
+    while (retries--)
+    {
+        sprintf(buffer, SET_APN, 0, accessPointName);
+        writeCommand(buffer);
+        if (readCommand(lines) == 1 && isOK(lines[0]))
+        {
+            break;
+        }
+        delay(100);
+    }
+    if (retries == -1)
+    {
+        return false;
+    }
+
+    return setAutoConnect(true) && reboot();
+}
+
+bool TelenorNBIoT::setAutoConnect(bool enabled)
+{
+    sprintf(buffer, CONFIG_AUTOCONN, enabled ? "TRUE" : "FALSE");
+    writeCommand(buffer);
     return readCommand(lines) == 1 && isOK(lines[0]);
 }
 
