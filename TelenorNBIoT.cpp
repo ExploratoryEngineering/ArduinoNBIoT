@@ -577,7 +577,7 @@ int splitFields(char *line, char **fields, uint8_t maxFields)
 {
     fields[0] = line;
     int found = 1;
-    for(char *p = line; *p != '\0' && found < maxFields; p++) {
+    for(char *p = line; *p != '\0'; p++) {
         if (*p == '"')
         {
             // replace double-quote with null-terminator
@@ -593,7 +593,10 @@ int splitFields(char *line, char **fields, uint8_t maxFields)
         else if (*p == ',')
         {
             *p = '\0';
-            fields[found++] = p + 1;
+            if (found < maxFields)
+            {
+                fields[found++] = p + 1;
+            }
         }
     }
     return found;
