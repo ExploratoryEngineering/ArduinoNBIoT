@@ -97,17 +97,30 @@ class TelenorNBIoT
     bool createSocket(const uint16_t listenPort = 1234);
 
     /**
-     * Receive data.
+     * Receive bytes. Pass in a char array to store the bytes and the length of
+     * the array. Returns the number of bytes received. If there's no data
+     * available it will return 0. Check receivedBytesRemaining() to see if
+     * there are more bytes available in case the buffer was too small to fill
+     * all data received.
+     * Check where the data originated from by calling receivedFromIP() and
+     * receivedFromPort().
      */
-    bool receive(char *buffer, uint16_t *length, uint16_t *remain = NULL);
+    size_t receiveBytes(char *outbuf, uint16_t bufferLength);
 
     /**
-     * Receive any pending data. If there's no data available it will yield an
-     * error. The IP address and port of the originating server will be placed
-     * in the ipport parameter. If the parameter is NULL they won't be set. The
-     * buffer and length parameters can not be set to NULL.
+     * Number of remaining bytes received
      */
-    bool receiveFrom(char *ip, uint16_t *port, char *buffer, uint16_t *length, uint16_t *remain = NULL);
+    size_t receivedBytesRemaining();
+
+    /**
+     * Get the remote IP address of the last received package
+     */
+    IPAddress receivedFromIP();
+
+    /**
+     * Get the remote port of the last received package
+     */
+    uint16_t receivedFromPort();
 
     /**
      * Send UDP packet to remote IP address.
@@ -177,6 +190,9 @@ class TelenorNBIoT
     char *lines[MAXLINES];
     power_save_mode m_psm;
     int _errCode = -1;
+    IPAddress _receivedFromIP;
+    uint16_t _receivedFromPort = 0;
+    size_t _receivedBytesRemaining = 0;
 
     bool dataOn();
     uint8_t readCommand(char **lines);
@@ -187,7 +203,6 @@ class TelenorNBIoT
     bool isOK(const char *line);
     bool isError(const char *line);
     int parseErrorCode(const char *line);
-    int splitFields(char *line, char **fields);
     void hexToBytes(const char *hex, const uint16_t byte_count, char *bytes);
     void writeBuffer(const char *data, uint16_t length);
     bool sendTo(const char *ip, const uint16_t port, const char *data, const uint16_t length);

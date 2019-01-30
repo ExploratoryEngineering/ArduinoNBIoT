@@ -22,7 +22,7 @@
 #define SOCR "NSOCR=\"DGRAM\",17,%d,1"
 #define SOSTF "NSOSTF="
 #define SOCL "NSOCL=%d"
-#define RECVFROM "NSORF=%d,255"
+#define RECVFROM "NSORF=%d,%d"
 #define GPRS "CGATT?"
 #define REG_STATUS "CEREG?"
 #define IMSI "CIMI"
@@ -34,6 +34,8 @@
 #define CONNECT_DATA "CGATT=1"
 #define FIRMWARE "CGMR"
 #define DEFAULT_TIMEOUT 2000
+
+int splitFields(char *line, char **fields, uint8_t maxFields);
 
 TelenorNBIoT::TelenorNBIoT(String accessPointName, uint16_t mobileCountryCode, uint16_t mobileNetworkCode)
 {
@@ -249,7 +251,7 @@ int TelenorNBIoT::rssi()
         return rssi;
     }
     char* fields[2];
-    int found = splitFields(lines[0] + 6, fields);
+    int found = splitFields(lines[0] + 6, fields, 2);
     if (found != 1)
     {
         return rssi;
@@ -306,9 +308,6 @@ void TelenorNBIoT::writeBuffer(const char *data, uint16_t length)
 
 bool TelenorNBIoT::sendTo(const char *ip, const uint16_t port, const char *data, const uint16_t length)
 {
-    if (_socket == -1) {
-        return false;
-    }
     ublox->print(PREFIX);
     ublox->print(SOSTF);
     ublox->print(_socket);
@@ -338,7 +337,7 @@ bool TelenorNBIoT::sendTo(const char *ip, const uint16_t port, const char *data,
     if (readCommand(lines) == 2 && isOK(lines[1]))
     {
         char *fields[10];
-        int count = splitFields(lines[0], fields);
+        int count = splitFields(lines[0], fields, 10);
         if (count == 2)
         {
             // Found two fields. First is socket no
@@ -366,52 +365,41 @@ bool TelenorNBIoT::sendString(IPAddress remoteIP, const uint16_t port, String st
     return sendBytes(remoteIP, port, str.c_str(), str.length());
 }
 
-bool TelenorNBIoT::receiveFrom(char *ip, uint16_t *port, char *outbuf, uint16_t *length, uint16_t *remain)
+size_t TelenorNBIoT::receiveBytes(char *outbuf, uint16_t bufferLength)
 {
-    if (_socket == -1) {
-        return false;
-    }
-    if (length == NULL) {
-        return false;
-    }
-    sprintf(buffer, RECVFROM, _socket);
+    sprintf(buffer, RECVFROM, _socket, bufferLength);
     writeCommand(buffer);
     if (readCommand(lines) == 2 && isOK(lines[1]))
     {
-        // Data should be <socket>,<ip>,<port>,<length>,<data>,<remaining length>
+        // Fields should be <socket>,<ip>,<port>,<length>,<data>,<remaining length>
         char *fields[10];
-        int found = splitFields(lines[0], fields);
+        int found = splitFields(lines[0], fields, 10);
         if (found == 6)
         {
-            if (ip != NULL)
-            {
-                strcpy(ip, fields[1]);
-            }
-            if (port != NULL)
-            {
-                *port = atoi(fields[2]);
-            }
-            
-            *length = atoi(fields[3]);
-            char *pos = fields[4];
-            pos++; // inc by 1 to skip double-quote char
-            hexToBytes(pos, *length, outbuf);
-            outbuf[*length] = 0; // end with null-terminator
-            
-            if (remain != NULL)
-            {
-                *remain = atoi(fields[5]);
-            }
-            return true;
+            _receivedFromIP.fromString(fields[1]);
+            _receivedFromPort = atoi(fields[2]);
+            size_t readLength = atoi(fields[3]);
+            hexToBytes(fields[4], readLength, outbuf);
+            _receivedBytesRemaining = atoi(fields[5]);
+            return readLength;
         }
     }
-    return false;
+    return 0;
 }
 
-bool TelenorNBIoT::receive(char *buffer, uint16_t *length, uint16_t *remain)
+size_t TelenorNBIoT::receivedBytesRemaining()
 {
-    // TODO(stalehd): Check the originating IP address.
-    return receiveFrom(NULL, NULL, buffer, length, remain);
+    return _receivedBytesRemaining;
+}
+
+IPAddress TelenorNBIoT::receivedFromIP()
+{
+    return _receivedFromIP;
+}
+
+uint16_t TelenorNBIoT::receivedFromPort()
+{
+    return _receivedFromPort;
 }
 
 bool TelenorNBIoT::powerSaveMode(power_save_mode psm)
@@ -471,20 +459,6 @@ int TelenorNBIoT::parseErrorCode(const char *line)
     line += 12;
     int errCode = atoi(line);
     return errCode;
-}
-
-int TelenorNBIoT::splitFields(char *line, char **fields)
-{
-    int found = 1;
-    fields[0] = line;
-    for(char *p = line; *p != '\0'; p++) {
-        if (*p == ',')
-        {
-            *p = 0;
-            fields[found++] = p + 1;
-        }
-    }
-    return found;
 }
 
 void TelenorNBIoT::hexToBytes(const char *hex, const uint16_t byte_count, char *bytes)
@@ -590,4 +564,37 @@ void TelenorNBIoT::writeCommand(const char *cmd)
     ublox->print(PREFIX);
     ublox->print(cmd);
     ublox->print(POSTFIX);
+}
+
+/**
+ * Splits a comma separated and null terminated response line from u-blox.
+ * Line should be a pointer to the first character of the first field (not
+ * the beginning of the line). It will modify the input line by replacing
+ * comma and double quotes with `\0`. Each field will point to the first
+ * character of each field. Returns the number of found fields.
+ */
+int splitFields(char *line, char **fields, uint8_t maxFields)
+{
+    fields[0] = line;
+    int found = 1;
+    for(char *p = line; *p != '\0' && found < maxFields; p++) {
+        if (*p == '"')
+        {
+            // replace double-quote with null-terminator
+            *p = '\0';
+            
+            // if opening quote - move pointer one ahead
+            int current = found-1;
+            if (p == fields[current])
+            {
+                fields[current] = p + 1;
+            }
+        }
+        else if (*p == ',')
+        {
+            *p = '\0';
+            fields[found++] = p + 1;
+        }
+    }
+    return found;
 }
