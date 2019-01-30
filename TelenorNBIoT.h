@@ -97,10 +97,15 @@ class TelenorNBIoT
     bool createSocket(const uint16_t listenPort = 1234);
 
     /**
-     * Receive bytes. If there's no data available it will return 0.
+     * Receive bytes. Pass in a char array to store the bytes and the length of
+     * the array. Returns the number of bytes received. If there's no data
+     * available it will return 0. Check receivedBytesRemaining() to see if
+     * there are more bytes available in case the buffer was too small to fill
+     * all data received.
+     * Check where the data originated from by calling receivedFromIP() and
+     * receivedFromPort().
      */
-    size_t receiveBytes(char *buffer, uint16_t bufferLength);
-
+    size_t receiveBytes(char *outbuf, uint16_t bufferLength);
 
     /**
      * Number of remaining bytes received
@@ -198,7 +203,6 @@ class TelenorNBIoT
     bool isOK(const char *line);
     bool isError(const char *line);
     int parseErrorCode(const char *line);
-    int splitFields(char *line, char **fields);
     void hexToBytes(const char *hex, const uint16_t byte_count, char *bytes);
     void writeBuffer(const char *data, uint16_t length);
     bool sendTo(const char *ip, const uint16_t port, const char *data, const uint16_t length);
