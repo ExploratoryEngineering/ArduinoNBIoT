@@ -33,20 +33,46 @@
 SoftwareSerial ublox(10, 11);
 #endif
 
+/*
+ * Create an nbiot instance using default settings, which is the Telenor NB-IoT
+ * Development Platform's APN (mda.ee) and 0 for both mobile country code and
+ * mobile operator code (auto mode).
+ * 
+ * It's also possible to specify a different APN, mobile country code and
+ * mobile network code. This should speed up attaching to the network.
+ * 
+ * Example:
+ * TelenorNBIoT nbiot("mda.ee", 242, 01); // Telenor Norway
+ * 
+ * See list of codes here: https://www.mcc-mnc.com/
+ */
 TelenorNBIoT nbiot;
 
 // The remote IP address to send data packets to
 // u-blox SARA N2 does not support DNS
 IPAddress remoteIP(172, 16, 15, 14);
 int REMOTE_PORT = 1234;
+
+// How often we want to send a message, specified in milliseconds
+// 15 minutes = 15 (min) * 60 (sec in min) * 1000 (ms in sec)
 unsigned long INTERVAL_MS = (unsigned long) 15 * 60 * 1000;
 
 void setup() {
+  // Open a serial connection over USB for Serial Monitor
   Serial.begin(9600);
 
-  Serial.print("Connecting to NB-IoT module...\n");
+  // Useful for some Arduino boards to wait for the Serial Monitor to open
+  while (!Serial);
+
+  // Open the serial connection between the Arduino board and the NB-IoT module
   ublox.begin(9600);
-  nbiot.begin(ublox);
+  
+  // Try to initialize the NB-IoT module until it succeeds
+  Serial.print("Connecting to NB-IoT module...\n");
+  while (!nbiot.begin(ublox)) {
+    Serial.println("Begin failed. Retrying...");
+    delay(1000);
+  }
   
   /*
    * You neeed the IMEI and IMSI when setting up a device in our developer
@@ -60,7 +86,12 @@ void setup() {
   Serial.print("IMEI: ");
   Serial.println(nbiot.imei());
 
-  nbiot.createSocket();
+  // Try to create a socket until it succeeds
+  while (!nbiot.createSocket()) {
+    Serial.print("Error creating socket. Error code: ");
+    Serial.println(nbiot.errorCode(), DEC);
+    delay(100);
+  }
 }
 
 void loop() {
@@ -74,7 +105,7 @@ void loop() {
       Serial.println("Failed sending data");
     }
 
-    // Wait 15 minutes before sending again
+    // Wait specified time before sending again (see definition above)
     delay(INTERVAL_MS);
   } else {
     // Not connected yet. Wait 5 seconds before retrying.
