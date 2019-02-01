@@ -194,6 +194,7 @@ class TelenorNBIoT
     uint16_t _receivedFromPort = 0;
     size_t _receivedBytesRemaining = 0;
 
+    bool enableErrorCodes();
     bool setAutoConnect(bool enabled);
     bool dataOn();
     uint8_t readCommand(char **lines);

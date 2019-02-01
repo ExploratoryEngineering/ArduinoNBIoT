@@ -67,22 +67,21 @@ bool TelenorNBIoT::begin(Stream &serial, bool _debug)
     ublox->setTimeout(DEFAULT_TIMEOUT);
     while (!ublox) {}
     drain();
+    setAutoConnect(false);
     reboot();
 
-    // Enable error codes for u-blox SARA N2 errors
-    while (true)
-    {
-        writeCommand("CMEE=1");
-        if (readCommand(lines) == 1 && isOK(lines[0])) {
-            break;
-        }
-        delay(100);
-    }
-
-    
     return online() &&
         setNetworkOperator(mcc, mnc) &&
         ensureAccessPointName(apn);
+}
+
+bool TelenorNBIoT::enableErrorCodes()
+{
+    // Enable error codes for u-blox SARA N2 errors
+    return retry(10, [this]() {
+        writeCommand("CMEE=1");
+        return readCommand(lines) == 1 && isOK(lines[0]);
+    });
 }
 
 bool TelenorNBIoT::setNetworkOperator(uint8_t mobileCountryCode, uint8_t mobileNetworkCode)
@@ -145,28 +144,11 @@ bool TelenorNBIoT::setAccessPointName(const char *accessPointName)
         return true;
     }
 
-    if (!setAutoConnect(false) || !reboot())
-    {
-        return false;
-    }
-
-    bool cmdSuccess = retry(3, [this, accessPointName]() {
+    return retry(3, [this, accessPointName]() {
         sprintf(buffer, SET_APN, 0, accessPointName);
         writeCommand(buffer);
         return readCommand(lines) == 1 && isOK(lines[0]);
     });
-    if (!cmdSuccess)
-    {
-        return false;
-    }
-
-    cmdSuccess = retry(3, [this]() {
-        sprintf(buffer, ACTIVATE_APN, 0);
-        writeCommand(buffer);
-        return readCommand(lines) == 1 && isOK(lines[0]);
-    });
-
-    return cmdSuccess && setAutoConnect(true);
 }
 
 bool TelenorNBIoT::setAutoConnect(bool enabled)
@@ -304,10 +286,12 @@ bool TelenorNBIoT::closeSocket()
 bool TelenorNBIoT::reboot()
 {
     _socket = -1;
-    writeCommand(REBOOT);
-    delay(2000);
-    int ret = readCommand(lines);
-    return ret > 0 && isOK(lines[ret - 1]);
+    return retry(3, [this]() {
+        writeCommand(REBOOT);
+        delay(2000);
+        int ret = readCommand(lines);
+        return ret > 0 && isOK(lines[ret - 1]);
+    }) && enableErrorCodes();
 }
 
 bool TelenorNBIoT::online()
