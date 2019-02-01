@@ -36,6 +36,7 @@
 #define FIRMWARE "CGMR"
 #define READ_APN "CGDCONT?"
 #define SET_APN "CGDCONT=%d,\"IP\",\"%s\""
+#define ACTIVATE_APN "CGACT=1,%d"
 #define CONFIG_AUTOCONN "NCONFIG=\"AUTOCONNECT\",\"%s\""
 #define DEFAULT_TIMEOUT 2000
 
@@ -68,13 +69,9 @@ bool TelenorNBIoT::begin(Stream &serial, bool _debug)
     drain();
     reboot();
 
-    // Make sure the correct APN is set
-    while (!ensureAccessPointName(apn)) {
-        delay(100);
-    }
-
     // Enable error codes for u-blox SARA N2 errors
-    while (true) {
+    while (true)
+    {
         writeCommand("CMEE=1");
         if (readCommand(lines) == 1 && isOK(lines[0])) {
             break;
@@ -82,8 +79,10 @@ bool TelenorNBIoT::begin(Stream &serial, bool _debug)
         delay(100);
     }
 
+    
     return online() &&
-        setNetworkOperator(mcc, mnc);
+        setNetworkOperator(mcc, mnc) &&
+        ensureAccessPointName(apn);
 }
 
 bool TelenorNBIoT::setNetworkOperator(uint8_t mobileCountryCode, uint8_t mobileNetworkCode)
@@ -151,23 +150,23 @@ bool TelenorNBIoT::setAccessPointName(const char *accessPointName)
         return false;
     }
 
-    int8_t retries = 3;
-    while (retries--)
-    {
+    bool cmdSuccess = retry(3, [this, accessPointName]() {
         sprintf(buffer, SET_APN, 0, accessPointName);
         writeCommand(buffer);
-        if (readCommand(lines) == 1 && isOK(lines[0]))
-        {
-            break;
-        }
-        delay(100);
-    }
-    if (retries == -1)
+        return readCommand(lines) == 1 && isOK(lines[0]);
+    });
+    if (!cmdSuccess)
     {
         return false;
     }
 
-    return setAutoConnect(true) && reboot();
+    cmdSuccess = retry(3, [this]() {
+        sprintf(buffer, ACTIVATE_APN, 0);
+        writeCommand(buffer);
+        return readCommand(lines) == 1 && isOK(lines[0]);
+    });
+
+    return cmdSuccess && setAutoConnect(true);
 }
 
 bool TelenorNBIoT::setAutoConnect(bool enabled)
