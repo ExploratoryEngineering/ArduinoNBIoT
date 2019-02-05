@@ -13,9 +13,9 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
-#include <functional>
-#include "TelenorNBIoT.h"
 #include <Arduino.h>
+#include "func.h"
+#include "TelenorNBIoT.h"
 #include <Udp.h>
 
 #define PREFIX "AT+"
@@ -37,7 +37,7 @@
 #define DEFAULT_TIMEOUT 2000
 
 int splitFields(char *line, char **fields, uint8_t maxFields);
-bool retry(uint8_t attempts, std::function<bool ()> fn, uint16_t delayBetween = 100);
+bool retry(uint8_t attempts, nonstd::function<bool ()> fn, uint16_t delayBetween = 100);
 
 TelenorNBIoT::TelenorNBIoT(String accessPointName, uint16_t mobileCountryCode, uint16_t mobileNetworkCode)
 {
@@ -615,7 +615,7 @@ int splitFields(char *line, char **fields, uint8_t maxFields)
     return found;
 }
 
-bool retry(uint8_t attempts, std::function<bool ()> fn, uint16_t delayBetween)
+bool retry(uint8_t attempts, nonstd::function<bool ()> fn, uint16_t delayBetween)
 {
     while (attempts--)
     {
