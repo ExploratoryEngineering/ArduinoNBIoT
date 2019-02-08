@@ -194,11 +194,15 @@ class TelenorNBIoT
     uint16_t _receivedFromPort = 0;
     size_t _receivedBytesRemaining = 0;
 
+    bool enableErrorCodes();
+    bool setAutoConnect(bool enabled);
     bool dataOn();
     uint8_t readCommand(char **lines);
     void writeCommand(const char *cmd);
     void drain();
     bool setNetworkOperator(uint8_t, uint8_t);
+    bool ensureAccessPointName(const char *accessPointName);
+    char* readAccessPointName();
     bool setAccessPointName(const char *accessPointName);
     bool isOK(const char *line);
     bool isError(const char *line);
