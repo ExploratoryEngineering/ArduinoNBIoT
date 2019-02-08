@@ -13,8 +13,9 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
-#include "TelenorNBIoT.h"
 #include <Arduino.h>
+#include "func.h"
+#include "TelenorNBIoT.h"
 #include <Udp.h>
 
 #define PREFIX "AT+"
@@ -36,6 +37,7 @@
 #define DEFAULT_TIMEOUT 2000
 
 int splitFields(char *line, char **fields, uint8_t maxFields);
+bool retry(uint8_t attempts, nonstd::function<bool ()> fn, uint16_t delayBetween = 100);
 
 TelenorNBIoT::TelenorNBIoT(String accessPointName, uint16_t mobileCountryCode, uint16_t mobileNetworkCode)
 {
@@ -163,37 +165,40 @@ bool TelenorNBIoT::isRegistering()
 
 String TelenorNBIoT::imei()
 {
-    while (strnlen(_imei, sizeof _imei) != 15)
+    if (strnlen(_imei, sizeof _imei) != 15)
     {
-        writeCommand(IMEI);
-        if (readCommand(lines) == 2 && isOK(lines[1]))
-        {
-            // Line 1 contains IMEI ("+CGSN: <15-digit IMEI>")
-            char *ptr = lines[0] + 7;
-            memcpy(_imei, ptr, strnlen(ptr, 15) + 1);
-        }
-        else
-        {
-            delay(100);
-        }
+        retry(10, [this]() {
+            writeCommand(IMEI);
+            if (readCommand(lines) == 2 && isOK(lines[1]))
+            {
+                // Line 1 contains IMEI ("+CGSN: <15-digit IMEI>")
+                char *ptr = lines[0] + 7;
+                if (strnlen(ptr, 16) == 15) {
+                    memcpy(_imei, ptr, 16);
+                    return true;
+                }
+            }
+            
+            return false;
+        });
     }
     return String(_imei);
 }
 
 String TelenorNBIoT::imsi()
 {
-    while (strnlen(_imsi, sizeof _imsi) != 15)
+    if (strnlen(_imsi, sizeof _imsi) != 15)
     {
-        writeCommand(IMSI);
-        if (readCommand(lines) == 2 && isOK(lines[1]))
-        {
-            // Line contains IMSI ("<15 digit IMSI>")
-            memcpy(_imsi, lines[0], strnlen(lines[0], 15) + 1);
-        }
-        else
-        {
-            delay(100);
-        }
+        retry(10, [this]() {
+            writeCommand(IMSI);
+            if (readCommand(lines) == 2 && isOK(lines[1]) && strnlen(lines[0], 16) == 15)
+            {
+                // Line contains IMSI ("<15 digit IMSI>")
+                memcpy(_imsi, lines[0], strnlen(lines[0], 15) + 1);
+                return true;
+            }
+            return false;
+        });
     }
     return String(_imsi);
 }
@@ -608,4 +613,16 @@ int splitFields(char *line, char **fields, uint8_t maxFields)
         }
     }
     return found;
+}
+
+bool retry(uint8_t attempts, nonstd::function<bool ()> fn, uint16_t delayBetween)
+{
+    while (attempts--)
+    {
+        if (fn()) {
+            return true;
+        }
+        delay(delayBetween);
+    }
+    return false;
 }
