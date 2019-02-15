@@ -1,4 +1,4 @@
-# The Telenor NB-IoT Arduino library
+# The Telenor NB-IoT Arduino library [![Build Status](https://travis-ci.com/ExploratoryEngineering/ArduinoNBIoT.svg?branch=master)](https://travis-ci.com/ExploratoryEngineering/ArduinoNBIoT)
 This is a library to make the NB-IoT breakouts from
 [Exploratory Engineering](https://shop.exploratory.engineering/) a bit easier to use.
 
