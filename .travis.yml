@@ -1,0 +1,20 @@
+dist: xenial
+language: c++
+
+go:
+  - 1.11.x
+
+before_install:
+  - mkdir -p ~/Arduino/libraries
+  - ln -s $(pwd) ~/Arduino/libraries/
+  - go get -u github.com/arduino/arduino-cli
+  - cd "$GOPATH/src/github.com/arduino/arduino-cli/"
+  - git checkout tags/0.3.3-alpha.preview
+  - cd -
+  - arduino-cli core update-index
+  - arduino-cli core install arduino:avr
+
+script:
+  - arduino-cli compile -b arduino:avr:uno examples/hello
+  - arduino-cli compile -b arduino:avr:uno examples/receive
+  - arduino-cli compile -b arduino:avr:uno examples/interactive
