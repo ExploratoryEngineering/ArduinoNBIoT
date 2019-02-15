@@ -54,7 +54,10 @@ void setup() {
   printHelp();
 
   ublox.begin(9600);
-  nbiot.begin(ublox);
+  while (!nbiot.begin(ublox)) {
+    Serial.println("Begin failed. Retrying...");
+    delay(1000);
+  }
 }
 
 void printHelp() {
@@ -134,13 +137,27 @@ void loop() {
         }
         break;
 
-      case 'r':
-        if (nbiot.receiveFrom(NULL, NULL, databuf, &tmplen)) {
-          Serial.println(F("Received data"));
+      case 'r': {
+        const uint16_t bufferLength = 32;
+        char buffer[bufferLength];
+
+        int bytesReceived = nbiot.receiveBytes(buffer, bufferLength);
+        if (bytesReceived > 0) {
+          Serial.print(F("Received data from "));
+          Serial.print(nbiot.receivedFromIP());
+          Serial.print(F(":"));
+          Serial.println(nbiot.receivedFromPort());
+
+          Serial.print(F("Data as string: "));
+          for (uint16_t i=0; i<bytesReceived; i++) {
+            Serial.print(String(buffer[i]));
+          }
+          Serial.println();
         } else {
           Serial.println(F("No data received"));
         }
-
+        break;
+      }
       case 'b':
         if (nbiot.reboot()) {
           Serial.println(F("Rebooted successfully"));
